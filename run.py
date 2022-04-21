@@ -17,3 +17,12 @@ def parse_args():
         help='''TBD''')
 
     return parser.parse_args()
+
+
+def main():
+    """
+    Run the model
+    """
+    model = None
+    dataset = None
+    boxes, scores, labels = model.predict(dataset)
