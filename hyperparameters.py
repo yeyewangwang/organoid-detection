@@ -1,15 +1,15 @@
 #File for hyperparameter experimentation
 
+#Parameters for preprocessing
+img_height = 300
+
+img_width = 300
+
+batch_size = 10
+
+#Parameters for models
 num_epochs = 50
 
 learning_rate = 1e-3
 
-img_size = 224
-
-preprocess_sample_size = 400
-
 max_num_weights = 5
-
-batch_size = 10
-
-num_classes = 15
