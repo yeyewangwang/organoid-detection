@@ -13,3 +13,7 @@ num_epochs = 50
 learning_rate = 1e-3
 
 max_num_weights = 5
+
+optimizer = 'Adam'
+
+early_stop = 30

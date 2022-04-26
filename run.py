@@ -27,7 +27,8 @@ def main():
         path_to_testing_labels=data_dir + "/test_labels.csv",
         path_to_training_labels=data_dir + "/train_labels.csv",
     )
-    print("Data retrieved!")
+    print("Data retrieved! Checking that images have been resized...")
+    print((300,300) == train_images[0].size)
 
     #train the model
 
