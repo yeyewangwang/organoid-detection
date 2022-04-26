@@ -1,3 +1,4 @@
+image_path,x1,y1,x2,y2,class_name
 C:/Users/Timothy/Dropbox/keras-retinanet/images/train/Subset_1_300x300_001.jpg,194,264,277,299,organoid
 C:/Users/Timothy/Dropbox/keras-retinanet/images/train/Subset_1_300x300_001.jpg,208,204,287,285,organoid
 C:/Users/Timothy/Dropbox/keras-retinanet/images/train/Subset_1_300x300_001.jpg,256,42,300,100,organoid

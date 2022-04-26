@@ -1,3 +1,4 @@
+import csv
 import os
 import hyperparameters as hp
 import numpy as np
@@ -20,12 +21,13 @@ def get_images(
     img_list = []
     for img_path in img_dir:
         img = Image.open(path_to_images + img_path)
-        resized_img = img.resize(size=(hp.img_height, hp.img_width))
+        #if we resize, the labels are off
+        #resized_img = img.resize(size=(hp.img_height, hp.img_width))
 
         #if augment:
             # if we wanted to add any augmentation of the data, we could do so here
         
-        img_list.append(resized_img)
+        img_list.append(img)
 
     return img_list
 
@@ -37,7 +39,37 @@ def get_images(
 def get_bounding_box_labels(
     path_to_csv,
 ):
-    return {}
+    boxes = {}
+    count = 0
+    test_substring = "C:/Users/Timothy/Desktop/keras-retinanet/images/test/"
+    train_substring = "C:/Users/Timothy/Dropbox/keras-retinanet/images/train/"
+
+    with open(path_to_csv) as csv_file:
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            count += 1
+
+            # Remove the location from the image filenames
+            raw_image_name = row['image_path']
+            image_name = raw_image_name
+            if train_substring in raw_image_name:
+                image_name = raw_image_name.replace(train_substring, "")
+            elif test_substring in raw_image_name:
+                image_name = raw_image_name.replace(test_substring, "")
+            
+            # Get the coordinates for the bounding box for this organoid
+            box_coords = {}
+            box_coords['x1'] = row['x1']
+            box_coords['x2'] = row['x2']
+            box_coords['y1'] = row['y1']
+            box_coords['y2'] = row['y2']
+            if image_name in boxes:
+                boxes[image_name].append(box_coords)
+            else:
+                boxes[image_name] = [box_coords]
+
+    print("Found " + str(count) + " organoid labels")
+    return boxes
 
 # Gets training and testing data
 # INPUT:
@@ -66,10 +98,10 @@ def get_data(
     print("Found " + str(len(test_images)) + " test images")
     print("Getting training labels...")
     train_labels = get_bounding_box_labels(path_to_training_labels)
-    print("Found " + str(len(train_labels)) + " train labels")
+    print("Found " + str(len(train_labels)) + " train images with organoid labels")
     print("Getting testing labels...")
     test_labels = get_bounding_box_labels(path_to_testing_labels)
-    print("Found " + str(len(test_labels)) + " test labels")
+    print("Found " + str(len(test_labels)) + " test images with organoid labels")
 
     return train_images, train_labels, test_images, test_labels
 
