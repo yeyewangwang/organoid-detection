@@ -13,3 +13,7 @@ max_num_weights = 5
 batch_size = 10
 
 num_classes = 15
+
+optimizer = 'Adam'
+
+early_stop =30
