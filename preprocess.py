@@ -4,7 +4,7 @@ import hyperparameters as hp
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from skimage.transform import resize
+from skimage.transform import rescale
 
 
 # Loads in images from a specified directory
@@ -19,17 +19,23 @@ def get_images(
 ):
     img_dir = os.listdir(path_to_images)
     img_list = []
+    scales_list = []
     for img_path in img_dir:
-        img = Image.open(path_to_images + img_path)
+        img = np.asarray(Image.open(path_to_images + img_path))
         #if we resize, the labels are off
-        #resized_img = img.resize(size=(hp.img_height, hp.img_width))
+        if img.shape[0] != hp.img_height:
+            scale_factor = hp.img_height / img.shape[0]
+            img = rescale(img, scale=scale_factor, channel_axis=2)
+        else:
+            scale_factor = 1
 
         #if augment:
             # if we wanted to add any augmentation of the data, we could do so here
         
         img_list.append(img)
+        scales_list.append(scale_factor)
 
-    return img_list
+    return img_list, scales_list
 
 # Loads in the bounding boxes from csv file
 # INPUT:
@@ -56,13 +62,13 @@ def get_bounding_box_labels(
                 image_name = raw_image_name.replace(train_substring, "")
             elif test_substring in raw_image_name:
                 image_name = raw_image_name.replace(test_substring, "")
-            
+
             # Get the coordinates for the bounding box for this organoid
             box_coords = {}
-            box_coords['x1'] = row['x1']
-            box_coords['x2'] = row['x2']
-            box_coords['y1'] = row['y1']
-            box_coords['y2'] = row['y2']
+            box_coords['x1'] = int(row['x1'])
+            box_coords['x2'] = int(row['x2'])
+            box_coords['y1'] = int(row['y1'])
+            box_coords['y2'] = int(row['y2'])
             if image_name in boxes:
                 boxes[image_name].append(box_coords)
             else:
@@ -70,6 +76,33 @@ def get_bounding_box_labels(
 
     print("Found " + str(count) + " organoid labels")
     return boxes
+
+
+def find_images_by_boxes(boxes, path_to_images, augment=False):
+    """
+    Take a dictionary of boxes, where each key is an image file name. Return each image,
+    rescale the image, and rescale the box coordinates by the same scale.
+    """
+    images = {}
+    for img_path, img_boxes in boxes.items():
+        img = np.asarray(Image.open(path_to_images + img_path))
+        # if we resize, the labels are off
+        if img.shape[0] != hp.img_height:
+            scale_factor = hp.img_height / img.shape[0]
+            img = rescale(img, scale=scale_factor, channel_axis=2)
+        else:
+            scale_factor = 1
+
+        for box in img_boxes:
+            for coord in box:
+                box[coord] *= scale_factor
+        images[img_path] = img
+
+        # Add augmentation here, if necessary.
+        # if augment:
+        #     pass
+    return images, boxes
+
 
 # Gets training and testing data
 # INPUT:
@@ -90,12 +123,12 @@ def get_data(
     path_to_testing_labels,
     augment=False,
 ):
-    print("Getting training images...")
-    train_images = get_images(path_to_training_data, augment)
-    print("Found " + str(len(train_images)) + " train images")
-    print("Getting testing images...")
-    test_images = get_images(path_to_testing_data, augment)
-    print("Found " + str(len(test_images)) + " test images")
+    # print("Getting training images...")
+    # train_images, train_scales = get_images(path_to_training_data, augment)
+    # print("Found " + str(len(train_images)) + " train images")
+    # print("Getting testing images...")
+    # test_images, test_scales = get_images(path_to_testing_data, augment)
+    # print("Found " + str(len(test_images)) + " test images")
     print("Getting training labels...")
     train_labels = get_bounding_box_labels(path_to_training_labels)
     print("Found " + str(len(train_labels)) + " train images with organoid labels")
@@ -103,5 +136,9 @@ def get_data(
     test_labels = get_bounding_box_labels(path_to_testing_labels)
     print("Found " + str(len(test_labels)) + " test images with organoid labels")
 
-    return train_images, train_labels, test_images, test_labels
+    print("Finding training images by the file names given in the labels")
+    train_images, train_labels  = find_images_by_boxes(train_labels, path_to_training_data, augment=augment)
+    print("Finding testing images by the file names given in the labels")
+    test_images, test_labels = find_images_by_boxes(test_labels, path_to_testing_data, augment=augment)
 
+    return train_images, train_labels, test_images, test_labels
