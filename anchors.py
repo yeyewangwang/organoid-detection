@@ -67,17 +67,9 @@ def IOU_nocenter(box_array, anchors):
 
     return intersection / union
 
-# Compute IOU of all boxes against all anchors. DO NOT ASSUME ANCHORS CENTERED AT BOX CENTER.
-# box_array: shape (N, 4)
-# anchors: shape (M, 4)
-# returns: shape (N, M) which shows IOU for box N and anchor M 
-def IOU(box_array, anchor_array):
-    # TODO. probably user tensorflow.
-
-
-    return
 
 # Assign ground truth to anchor boxes using IOU
+# FOR ONE IMAGE
 def ground_truth_anchors(box_array, img_width, img_height, centers_sqrt = 13, num_anchors = 10):
 
     # TODO: are all images same dims after preprocessing?
@@ -97,30 +89,17 @@ def ground_truth_anchors(box_array, img_width, img_height, centers_sqrt = 13, nu
     # get anchor w/h
     anchors = generate_anchors(box_array, num_anchors)
 
-    # make array of all anchor-center combos
-    anchor_array = np.zeros((centers * num_anchors, 4))
-
-    for i in range(num_anchors):
-        first = i * centers
-        last = (i + 2) * centers
-        curr_anchor_width = anchors[i,0]
-        curr_anchor_height = anchors[i,1]
-        # x1
-        anchor_array[first:last, 0] = center_coords[:,0] - int(curr_anchor_width/2)
-        # x2
-        anchor_array[first:last, 1] = anchor_array[first:last, 0] + curr_anchor_width
-        # y1
-        anchor_array[first:last, 2] = center_coords[:,1] - int(curr_anchor_height/2)
-        # y2
-        anchor_array[first:last, 3] = anchor_array[first:last, 1] + curr_anchor_height
-
-    iou = IOU(box_array, anchor_array)
+    iou = IOU_nocenter(box_array, anchors)
 
     # get best anchor-center combo for each input bbox
     best_iou_index = np.argmin(iou, axis = 1)
 
-    # TODO: not sure what to return...
+    # TODO: assign each bbox to a cell
 
-    return  best_iou_index
+    # TODO: return object of shape (13, 13, 10, 5).
+    # the 5 at the end is the actual prediction.
+    # 
+
+    return  iou
 
 
