@@ -14,7 +14,6 @@ def get_boxes(train_labels_dict):
     boxes_list = list(map(lambda x: x.values(), boxes))
     return np.array(boxes_list)
 
-
 # Generate anchors using k means
 # Ideally this would be done using IOU as a distance metric,
 # since Euclidean distance is biased against large boxes.
