@@ -5,28 +5,22 @@ from itertools import chain
 import csv
 import os
 from sklearn.cluster import KMeans
+from itertools import chain
 
-# TODO: Rewrite this to take in PREPROCESSED labels.
-def get_boxes(path_to_csv):
-    test_substring = "C:/Users/Timothy/Desktop/keras-retinanet/images/test/"
-    train_substring = "C:/Users/Timothy/Dropbox/keras-retinanet/images/train/"
 
-    rows = []
-
-    with open(path_to_csv) as csv_file:
-        reader = csv.DictReader(csv_file)
-        for row in reader:
-            count += 1
-            rows.append([int(row['x1']), int(row['x2']), int(row['y1']), int(row['y2'])])
-
-    return np.array(rows)
+# Get list of boxes for generating anchors
+def get_boxes(train_labels_dict):
+    boxes = list(chain(*train_labels_dict.values))
+    boxes_list = list(map(lambda x: x.values(), boxes))
+    return np.array(boxes_list)
 
 
 # Generate anchors using k means
 # Ideally this would be done using IOU as a distance metric,
 # since Euclidean distance is biased against large boxes.
 # however this would mean reimplementing kmeans. Meh!
-def generate_anchors(box_array, num_anchors):
+def generate_anchors(train_labels_dict, num_anchors):
+    box_array = get_boxes(train_labels_dict)
     n = box_array.shape[0]
 
     # get array of widths and heights from train labels
@@ -38,6 +32,8 @@ def generate_anchors(box_array, num_anchors):
 
     kmeans_model = KMeans(n_clusters = num_anchors)
     kmeans_model.fit(dims)
+
+    # TODO cache results
     return kmeans_model.cluster_centers_
 
 # Compute IOU of all boxes against all anchors. ASSUME ANCHORS CENTERED AT BOX CENTER.
@@ -70,36 +66,63 @@ def IOU_nocenter(box_array, anchors):
 
 # Assign ground truth to anchor boxes using IOU
 # FOR ONE IMAGE
-def ground_truth_anchors(box_array, img_width, img_height, centers_sqrt = 13, num_anchors = 10):
-
+def ground_truth_anchors(box_array, anchors, img_width, img_height, grid_dim = 13):
+    num_anchors = anchors.size[0]
+    num_boxes = box_array.size[0]
     # TODO: are all images same dims after preprocessing?
 
-    # given centers_sqrt, construct array of all grid coordinates and anchor indices
-    grid_el_width = int(img_width / centers_sqrt)
-    grid_el_height = int(img_height / centers_sqrt)
-    centers = centers_sqrt * centers_sqrt
-    ints = list(range(centers_sqrt))
-    center_index = np.array(np.meshgrid(ints, ints)).T.reshape(-1,2)
+    # construct array of all grid coordinates
+    cell_width = int(img_width / grid_dim)
+    cell_height = int(img_height / grid_dim)
+    num_cells = grid_dim * grid_dim
+    ints = list(range(grid_dim))
+    cell_index = np.array(np.meshgrid(ints, ints)).T.reshape(-1,2)
+    
+    # coordinates of box centers aka bx and by
+    bx = (box_array[:,0] + box_array[:,1] / 2).astype(int)
+    by = (box_array[:,2] + box_array[:,3] / 2).astype(int)
 
-    # translate grid coordinate into pixel coordinate of image
-    center_coords = np.copy(center_index)
-    center_coords[:,0] = center_coords[:,0] * grid_el_width + int(grid_el_width/2)
-    center_coords[:,1] = center_coords[:,1] * grid_el_height + int(grid_el_height/2)
+    # widths and heights
+    bw = box_array[:,1] - box_array[:,0]
+    bh = box_array[:,3] - box_array[:,2]
 
-    # get anchor w/h
-    anchors = generate_anchors(box_array, num_anchors)
+    # assign grid coordinates to boxes aka cx and cy
+    grid_x = np.floor_divide(bx, cell_width)
+    grid_y = np.floor_divide(by, cell_height)
+    cx = grid_x * cell_width
+    cy = grid_y * cell_height
 
+    # get offset coordinates aka sigma_tx and sigma_ty
+    sigma_tx = np.remainder(bx, cell_width)
+    sigma_ty = np.remainder(by, cell_height)
+
+    # get best anchor for each input bbox
     iou = IOU_nocenter(box_array, anchors)
-
-    # get best anchor-center combo for each input bbox
     best_iou_index = np.argmin(iou, axis = 1)
+    best_ious = iou[:,best_iou_index]
+    
+    # anchor dims for each input box
+    pw = anchors[best_ious,0]
+    ph = anchors[best_ious,1]
 
-    # TODO: assign each bbox to a cell
+    # finally we are ready to calculate "ground truth predictions"
+    tx = inverse_sigmoid(bx - cx)
+    ty = inverse_sigmoid(by - cy)
+    tw = np.log(bw / pw)
+    th = np.log(bh / ph)
+    to = inverse_sigmoid(iou)
 
-    # TODO: return object of shape (13, 13, 10, 5).
-    # the 5 at the end is the actual prediction.
-    # 
+    # if box X has best anchor k at grid coordinate i,j,
+    # result[i,j,k] = [tx ty tw th to]
+    # somewhat unsure what they should be otherwise but i don't think it matters for loss purposes
+    result = np.zeros((num_boxes, grid_dim, grid_dim, num_anchors, 5))
+    result[:, grid_x, grid_y, best_iou_index, :] = np.hstack(tx, ty, tw, th, to)
 
-    return  iou
+    return result
 
+def inverse_sigmoid(x):
+    return -np.log((1 / (x + 1e-8)) - 1)
 
+def load_anchors():
+    # TODO
+    return
