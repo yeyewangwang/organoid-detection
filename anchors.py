@@ -116,8 +116,9 @@ def ground_truth_anchors(box_array, anchors, img_width, img_height, grid_dim = 1
     # if box X has best anchor k at grid coordinate i,j,
     # result[i,j,k] = [tx ty tw th to]
     # somewhat unsure what they should be otherwise but i don't think it matters for loss purposes
-    result = np.zeros((num_boxes, grid_dim, grid_dim, num_anchors, 5))
-    result[:, grid_x, grid_y, best_iou_index, :] = np.hstack((tx, ty, tw, th, to))
+    preds = np.hstack((tx, ty, tw, th, to))
+    result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
+    result[grid_x, grid_y, best_iou_index, :] = preds
 
     return result
 
