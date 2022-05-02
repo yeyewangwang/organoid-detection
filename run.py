@@ -2,6 +2,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from preprocess import get_data
+from anchors import *
 #from models import YOLOV4
 
 def parse_args():
@@ -30,6 +31,16 @@ def main():
     print("Data retrieved!")
     #print("Checking that images have been resized...")
     #print((300,300) == train_images[0].size)
+
+    # TODO make this an arg
+    # TODO make num_anchors an arg
+    calculate_anchors = True
+    num_anchors = 10
+    if calculate_anchors:
+        anchors = generate_anchors(train_labels, num_anchors)
+    else:
+        anchors = load_anchors()
+    
 
     #train the model
 
