@@ -8,11 +8,13 @@ from sklearn.cluster import KMeans
 from itertools import chain
 from scipy.special import logit, expit
 
-# Get list of boxes for generating anchors
+
+# Get array of all boxes for generating anchors
 def get_boxes(train_labels_dict):
     boxes = list(chain(*train_labels_dict.values()))
     boxes_list = list(map(lambda x: list(x.values()), boxes))
     return np.array(boxes_list)
+
 
 # Generate anchors using k means
 # Ideally this would be done using IOU as a distance metric,
@@ -37,12 +39,13 @@ def generate_anchors(train_labels_dict, num_anchors):
     # TODO cache results
     return anchors
 
+
+
 # Compute IOU of all boxes against all anchors. ASSUME ANCHORS CENTERED AT BOX CENTER.
 # boxes1: shape (N, 4)
 # anchors: shape (M, 2)
 # returns: shape (N, M) which shows IOU for box N and anchor M
 def IOU_nocenter(box_array, anchors):
-
     n = box_array.shape[0]
     m = anchors.shape[0]
 
@@ -52,7 +55,6 @@ def IOU_nocenter(box_array, anchors):
     boxes[:,0] = box_array[:,1] - box_array[:,0]
     # heights
     boxes[:,1] = box_array[:,3] - box_array[:,2]
-
 
     min_widths = np.minimum.outer(boxes[:,0], anchors[:,0])
     min_heights = np.minimum.outer(boxes[:,1], anchors[:,1])
@@ -66,8 +68,11 @@ def IOU_nocenter(box_array, anchors):
 
 
 # Assign ground truth to anchor boxes using IOU
-# FOR ONE IMAGE
-def encode_bboxes(box_array, anchors, img_width, img_height, grid_dim = 13):
+# FOR ONE IMAGE.
+# box_array: shape (N,4) if there are N boxes in the images (x1 x2 y1 y2)
+# returns: ground-truth prediction of shape (grid_dim, grid_dim, num_anchors, 5)
+def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
+    img_width, img_height, grid_dim = dims
     num_anchors = anchors.shape[0]
     num_boxes = box_array.shape[0]
     # TODO: are all images same dims after preprocessing?
@@ -111,59 +116,62 @@ def encode_bboxes(box_array, anchors, img_width, img_height, grid_dim = 13):
     ty = logit((by - cy)/cell_height).reshape(-1,1)
     tw = np.log(bw / pw).reshape(-1,1)
     th = np.log(bh / ph).reshape(-1,1)
-    to = logit(best_ious).reshape(-1,1)
+    to = np.ones((num_boxes, 1))
 
     # if box X has best anchor k at grid coordinate i,j,
     # result[i,j,k] = [tx ty tw th to]
     # somewhat unsure what they should be otherwise but i don't think it matters for loss purposes
     preds = np.hstack((tx, ty, tw, th, to))
     result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
-    # um, replace to with -inf?
-    result[:,:,:,4] = np.NINF
     result[grid_x, grid_y, best_iou_index, :] = preds
 
     return result
+
 
 def load_anchors():
     # TODO
     return
 
-# TODO: test/debug
-def decode_bboxes(result, anchors, img_width, img_height, grid_dim = 13):
-    num_anchors = anchors.shape[0]
+
+
+# Given NN output and INDICES OF CELL/PRIOR COMBOS TO ACTUALLY PREDICT FOR,
+# return bounding box predictions for those indices
+def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
+    img_width, img_height, grid_dim = dims
     cell_width = int(img_width / grid_dim)
     cell_height = int(img_height / grid_dim)
 
-    # we predict an anchor-cell-combo iff its iou prediction threshold is over 0.5
-    # AND it is the highest iou in the cell
-    iou_thresh_indices = expit(to) > 0.5
+    num_anchors = anchors.shape[0]
 
-    maxes = np.expand_dims(np.max(expit(to), axis = 2), axis = 2)
-    iou_best_indices = expit(to) >= np.repeat(maxes, num_anchors, axis = 2)
+    t = result[indices]
 
-    pred_indices = iou_thresh_indices * iou_best_indices
-
-    # the grid coords and anchors we predict for
-    grid_x, grid_y, anchor_index = np.nonzero(pred_indices)
+    # the grid coords and anchors we predicted for
+    grid_x, grid_y, anchor_index = np.nonzero(indices)
     cx = grid_x * cell_width
     cy = grid_y * cell_height
     pw = anchors[anchor_index,0]
     ph = anchors[anchor_index,1]
 
-    # the actual predictions
-    preds = result[pred_indices]
-    tx = preds[:,0]
-    ty = preds[:,1]
-    tw = preds[:,2]
-    th = preds[:,3]
-    to = preds[:,4]
+    return t_to_b(t, cx, cy, pw, ph)
+
+    
+def t_to_b(t, cx, cy, pw, ph):
+    tx = t[:,0]
+    ty = t[:,1]
+    tw = t[:,2]
+    th = t[:,3]
+    to = t[:,4]
 
     bx = expit(tx) + cx
     by = expit(ty) + cy
     bw = pw * np.exp(tw) # consider: making this numerically better-conditioned
     bh = ph * np.exp(th)
 
-    # TODO: do we want xy width height, or x1 x2 y1 y2?
     return np.hstack((bx, by, bw, bh))
 
-    
+def xywh_to_yxyx(b):
+    y_min = (b[:,1] - b[:,3] / 2).astype(int)
+    y_max = (b[:,1] + b[:,3] / 2).astype(int)
+    x_min = (b[:,0] - b[:,2] / 2).astype(int)
+    x_max = (b[:,0] + b[:,2] / 2).astype(int)
+    return np.hstack((y_min, y_max, x_min, x_max))
