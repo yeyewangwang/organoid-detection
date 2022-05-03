@@ -3,7 +3,8 @@ import numpy as np
 import tensorflow as tf
 from preprocess import get_data
 from anchors import *
-#from models import YOLOV4
+from models import run_yolov4
+from hyperparameters import hp
 
 def parse_args():
     """ Perform command-line argument parsing. """
@@ -40,10 +41,19 @@ def main():
         anchors = generate_anchors(train_labels, num_anchors)
     else:
         anchors = load_anchors()
-    
 
     #train the model
+    input = tf.keras.layers.Input([hp.img_height, hp.img_size, 3])
+    conv_boxes = run_yolov4(input)
+    # Add a function to process yolo_v4 convolution results into boxes
+    bboxes = conv_boxes
+    model = tf.keras.Model(input, bboxes)
 
+    for i in hp.epochs:
+        with tf.GradientTape() as tape:
+            data = None
+            pred_result = model(data, training=True)
+            # loss
     #test the model
 
 if __name__ == "__main__":
