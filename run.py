@@ -5,6 +5,7 @@ from preprocess import get_data
 from anchors import *
 from models import run_yolov4
 from hyperparameters import hp
+from train import yolo_loss
 
 def parse_args():
     """ Perform command-line argument parsing. """
@@ -48,13 +49,24 @@ def main():
     # Add a function to process yolo_v4 convolution results into boxes
     bboxes = conv_boxes
     model = tf.keras.Model(input, bboxes)
+    optimizer = tf.keras.optimizers.Adam()
 
     for i in hp.epochs:
         with tf.GradientTape() as tape:
-            data = None
-            pred_result = model(data, training=True)
+            preds = model(train_images, training=True)
             # loss
+            # What are these values?
+            yhat, lambda_coord, lambda_noobj, dims = None, None, None, None
+            loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+            gradients = tape.gradient(loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
     #test the model
+    preds = model(test_images, training=False)
+    # What are these values?
+    yhat, lambda_coord, lambda_noobj, dims = None, None, None, None
+    loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+    print(f"Testing loss {loss}")
 
 if __name__ == "__main__":
     #parse_args()
