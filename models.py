@@ -97,13 +97,22 @@ def run_yolov4(inp):
         working_data = perform_conv(inp=working_data, filt=512, kern=1, stri=1, pad='same')
         working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=1, pad='same')
         # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=512, filt2=512 in cspdarknet
-        working_data = perform_residual(inp=working_data, filt1=512, filt2=1024,
+        working_data = perform_residual(inp=working_data, filt1=512, filt2=1024,\
                                         kern1=1, kern2=3, stri=1, pad='same')  # Residual
 
     # GITHUB KEEPS GOING for LAYER 75 and beyond, not sure if this is backbone versus now into neck
     # AVGPOOL
     # CONNECTED
     # SOFTMAX
+
+    # Simplified ending of CSPDarknet53
+    working_data = perform_conv(inp=working_data, filt=256, kern=1, stri=1, pad='same')
+    l_features = working_data
+    # Down sample here
+    working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=2, pad='same')
+    m_features = working_data
+    working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=2, pad='same')
+    s_features = working_data
 
     # Neck:
     # SSP (increase receptive field and separate most important features from backbone)
