@@ -6,7 +6,7 @@ import csv
 import os
 from sklearn.cluster import KMeans
 from itertools import chain
-from scipy.special import logit
+from scipy.special import logit, expit
 
 # Get list of boxes for generating anchors
 def get_boxes(train_labels_dict):
@@ -67,7 +67,7 @@ def IOU_nocenter(box_array, anchors):
 
 # Assign ground truth to anchor boxes using IOU
 # FOR ONE IMAGE
-def ground_truth_anchors(box_array, anchors, img_width, img_height, grid_dim = 13):
+def encode_bboxes(box_array, anchors, img_width, img_height, grid_dim = 13):
     num_anchors = anchors.shape[0]
     num_boxes = box_array.shape[0]
     # TODO: are all images same dims after preprocessing?
@@ -118,6 +118,8 @@ def ground_truth_anchors(box_array, anchors, img_width, img_height, grid_dim = 1
     # somewhat unsure what they should be otherwise but i don't think it matters for loss purposes
     preds = np.hstack((tx, ty, tw, th, to))
     result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
+    # um, replace to with -inf?
+    result[:,:,:,4] = np.NINF
     result[grid_x, grid_y, best_iou_index, :] = preds
 
     return result
@@ -125,3 +127,43 @@ def ground_truth_anchors(box_array, anchors, img_width, img_height, grid_dim = 1
 def load_anchors():
     # TODO
     return
+
+# TODO: test/debug
+def decode_bboxes(result, anchors, img_width, img_height, grid_dim = 13):
+    num_anchors = anchors.shape[0]
+    cell_width = int(img_width / grid_dim)
+    cell_height = int(img_height / grid_dim)
+
+    # we predict an anchor-cell-combo iff its iou prediction threshold is over 0.5
+    # AND it is the highest iou in the cell
+    iou_thresh_indices = expit(to) > 0.5
+
+    maxes = np.expand_dims(np.max(expit(to), axis = 2), axis = 2)
+    iou_best_indices = expit(to) >= np.repeat(maxes, num_anchors, axis = 2)
+
+    pred_indices = iou_thresh_indices * iou_best_indices
+
+    # the grid coords and anchors we predict for
+    grid_x, grid_y, anchor_index = np.nonzero(pred_indices)
+    cx = grid_x * cell_width
+    cy = grid_y * cell_height
+    pw = anchors[anchor_index,0]
+    ph = anchors[anchor_index,1]
+
+    # the actual predictions
+    preds = result[pred_indices]
+    tx = preds[:,0]
+    ty = preds[:,1]
+    tw = preds[:,2]
+    th = preds[:,3]
+    to = preds[:,4]
+
+    bx = expit(tx) + cx
+    by = expit(ty) + cy
+    bw = pw * np.exp(tw) # consider: making this numerically better-conditioned
+    bh = ph * np.exp(th)
+
+    # TODO: do we want xy width height, or x1 x2 y1 y2?
+    return np.hstack((bx, by, bw, bh))
+
+    
