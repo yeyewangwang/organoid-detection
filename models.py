@@ -52,7 +52,7 @@ def perform_upsample(inp, scale):
 #   inp (numpy array) - input array with data to run model on
 # OUTPUT:
 #   TBD? out (numpy array) - final array after running model
-def run_yolov4(inp, num_classes=1):
+def run_yolov4(inp):
     working_data = keras.Input(shape=(hp.img_height, hp.img_width))(inp)
 
     # Backbone: CSPDarknet53 (53 convolutional layers) used in the yolov4
@@ -145,7 +145,7 @@ def run_yolov4(inp, num_classes=1):
 
     # Finish upsampling and concatenating all features together, start predicting bounding boxes
     features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
-    boxes1 = perform_conv(inp=features, filt=3 * (num_classes + 5), kern=1, stri=1,
+    boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
                    pad='same', act=False)
 
     features = perform_conv(inp=l_features, filt=256, kern=3, stri=2, pad='same')
@@ -158,7 +158,7 @@ def run_yolov4(inp, num_classes=1):
 
     # Produce the second set of bounding boxes
     features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    boxes2 = perform_conv(inp=features, filt=3 * (num_classes + 5), kern=1, stri=1,
+    boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
                           pad='same', act=False)
 
     features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
@@ -170,11 +170,12 @@ def run_yolov4(inp, num_classes=1):
 
     # Produce the third set of bounding boxes
     features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    boxes3 = perform_conv(inp=features, filt=3 * (num_classes + 5), kern=1, stri=1,
+    boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
                           pad='same', act=False)
 
     # Heads: YOLOv3
     # Needs to end in a 13x13x10 array
 
     # Maybe use conv results and produces, small, medium, and large boxes separtately
-    return boxes1, boxes2, boxes3
+    # return boxes1, boxes2, boxes3
+    return boxes3
