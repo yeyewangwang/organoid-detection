@@ -169,16 +169,17 @@ def t_to_b(t, cx, cy, pw, ph):
     th = t[:,3]
     to = t[:,4]
 
-    bx = tf.math.sigmoid(tx) + cx
-    by = tf.math.sigmoid(ty) + cy
-    bw = pw * tf.math.exp(tw) # consider: making this numerically better-conditioned
-    bh = ph * tf.math.exp(th)
+    bx = tf.cast(tf.math.sigmoid(tx), tf.int64) + cx
+    by = tf.cast(tf.math.sigmoid(ty), tf.int64) + cy
+    bw = tf.cast(pw * tf.math.exp(tw), tf.int64) # consider: making this numerically better-conditioned
+    bh = tf.cast(ph * tf.math.exp(th), tf.int64)
 
     return tf.stack([bx, by, bw, bh], axis = 1)
 
 def xywh_to_yxyx(b):
-    y_min = tf.cast(b[:,1] - b[:,3] / 2, tf.int32)
-    y_max = tf.cast(b[:,1] + b[:,3] / 2, tf.int32)
-    x_min = tf.cast(b[:,0] - b[:,2] / 2, tf.int32)
-    x_max = tf.cast(b[:,0] + b[:,2] / 2, tf.int32)
-    return tf.stack([y_min, y_max, x_min, x_max], axis = 1)
+    # y_min, x_min, y_max, x_max
+    y_min = b[:,1] - tf.cast(b[:,3] / 2, tf.int64)
+    y_max = b[:,1] + tf.cast(b[:,3] / 2, tf.int64)
+    x_min = b[:,0] - tf.cast(b[:,2] / 2, tf.int64)
+    x_max = b[:,0] + tf.cast(b[:,2] / 2, tf.int64)
+    return tf.stack([y_min, x_min, y_max, x_max], axis = 1)

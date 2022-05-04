@@ -4,8 +4,10 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
-    # TODO: sum up yolo_loss_single for each element in y, yhat
-    return 0
+    sum = 0
+    for i in range(tf.shape(y)[0].numpy()):
+        sum += yolo_loss_single(y[i], yhat[i], lambda_coord, lambda_noobj, anchors, dims)
+    return sum
 
 # TODO convert to tensor operations
 # y and yhat have shape (grid_dim, grid_dim, num_anchors, 5)
@@ -22,13 +24,12 @@ def yolo_loss_single(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_indices, anchors, dims))
     yhat_object_bb = xywh_to_yxyx(decode_bboxes(yhat, object_indices, anchors, dims))
     gl = tfa.losses.GIoULoss()
-    iou_loss = gl(y_object_bb, yhat_object_bb)  
-
+    iou_loss = tf.cast(gl(y_object_bb, yhat_object_bb), tf.float64)
 
     # objectness loss where there is an object: logistic objective.
     y_object_to = tf.gather_nd(y, object_indices)[:,4]
     yhat_object_to = tf.gather_nd(yhat, object_indices)[:,4]
-    bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits = False)
     objectness_loss = bce(y_object_to, yhat_object_to)
 
     # objectness loss where there's not an object: logistic objective
@@ -36,7 +37,7 @@ def yolo_loss_single(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     # IGNORE/ do not count it as a false positive
     y_no_object_to = tf.gather_nd(y, no_object_indices)[:,4]
     yhat_no_object_to = tf.gather_nd(yhat, no_object_indices)[:,4]
-    no_objectness_loss = bce(y_object_to, yhat_object_to)
+    no_objectness_loss = bce(y_no_object_to, yhat_no_object_to)
     
     return lambda_coord * iou_loss + objectness_loss + lambda_noobj * no_objectness_loss
 
