@@ -67,39 +67,40 @@ def run_yolov4(inp):
 
     working_data = perform_conv(inp=working_data, filt=128, kern=3, stri=2, pad='valid')
 
-    for i in range(2):
-        working_data = perform_conv(inp=working_data, filt=64, kern=1, stri=1, pad='same')
-        working_data = perform_conv(inp=working_data, filt=128, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
-        working_data = perform_residual(inp=working_data, filt1=64, filt2=128,
-                                        kern1=1, kern2=3, stri=1, pad='same')  # Residual
+    # for i in range(2):
+    #     working_data = perform_conv(inp=working_data, filt=64, kern=1, stri=1, pad='same')
+    #     working_data = perform_conv(inp=working_data, filt=128, kern=3, stri=1, pad='same')
+    #     # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
+    #     working_data = perform_residual(inp=working_data, filt1=64, filt2=128,
+    #                                     kern1=1, kern2=3, stri=1, pad='same')  # Residual
 
     working_data = perform_conv(inp=working_data, filt=256, kern=3, stri=2, pad='valid')
 
-    for i in range(8):
-        working_data = perform_conv(inp=working_data, filt=128, kern=1, stri=1, pad='same')
-        working_data = perform_conv(inp=working_data, filt=256, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
-        working_data = perform_residual(inp=working_data, filt1=64, filt2=256,
-                                        kern1=1, kern2=3, stri=1, pad='same')  # Residual
-
-    working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=2, pad='valid')
-
-    for i in range(8):
-        working_data = perform_conv(inp=working_data, filt=256, kern=1, stri=1, pad='same')
-        working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=256, filt2=256 in cspdarknet
-        working_data = perform_residual(inp=working_data, filt1=256, filt2=512,
-                                        kern1=1, kern2=3, stri=1, pad='same')  # Residual
-
-    working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=2, pad='valid')
-
-    for i in range(4):
-        working_data = perform_conv(inp=working_data, filt=512, kern=1, stri=1, pad='same')
-        working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=512, filt2=512 in cspdarknet
-        working_data = perform_residual(inp=working_data, filt1=512, filt2=1024,\
-                                        kern1=1, kern2=3, stri=1, pad='same')  # Residual
+    # TODO: possibly upsize here
+    # for i in range(8):
+    #     working_data = perform_conv(inp=working_data, filt=128, kern=1, stri=1, pad='same')
+    #     working_data = perform_conv(inp=working_data, filt=256, kern=3, stri=1, pad='same')
+    #     # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
+    #     working_data = perform_residual(inp=working_data, filt1=64, filt2=256,
+    #                                     kern1=1, kern2=3, stri=1, pad='same')  # Residual
+    #
+    # working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=2, pad='valid')
+    #
+    # for i in range(8):
+    #     working_data = perform_conv(inp=working_data, filt=256, kern=1, stri=1, pad='same')
+    #     working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=1, pad='same')
+    #     # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=256, filt2=256 in cspdarknet
+    #     working_data = perform_residual(inp=working_data, filt1=256, filt2=512,
+    #                                     kern1=1, kern2=3, stri=1, pad='same')  # Residual
+    #
+    # working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=2, pad='valid')
+    #
+    # for i in range(4):
+    #     working_data = perform_conv(inp=working_data, filt=512, kern=1, stri=1, pad='same')
+    #     working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=1, pad='same')
+    #     # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=512, filt2=512 in cspdarknet
+    #     working_data = perform_residual(inp=working_data, filt1=512, filt2=1024,\
+    #                                     kern1=1, kern2=3, stri=1, pad='same')  # Residual
 
     # GITHUB KEEPS GOING for LAYER 75 and beyond, not sure if this is backbone versus now into neck
     # AVGPOOL
@@ -125,56 +126,64 @@ def run_yolov4(inp):
     m_features = perform_conv(inp=m_features, filt=256, kern=1, stri=1, pad='same')
     features = tf.concat([m_features, features], axis=-1)
 
-    for i in range(2):
-        features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-    m_features = features
-
-    features = perform_conv(inp=features, filt=128, kern=1, stri=1, pad='same')
-    # Upsample previous results by 2 here
-    features = perform_upsample(features, 2)
-    l_features = perform_conv(inp=l_features, filt=128, kern=1, stri=1, pad='same')
-    features = tf.concat([l_features, features], axis=-1)
-    for i in range(2):
-        features = perform_conv(inp=features, filt=128, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-    l_features = features
+    # TODO: possibly upsize here
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    # m_features = features
+    #
+    # features = perform_conv(inp=features, filt=128, kern=1, stri=1, pad='same')
+    # # Upsample previous results by 2 here
+    # features = perform_upsample(features, 2)
+    # l_features = perform_conv(inp=l_features, filt=128, kern=1, stri=1, pad='same')
+    # features = tf.concat([l_features, features], axis=-1)
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=128, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    # l_features = features
 
     # Finish upsampling and concatenating all features together, start predicting bounding boxes
     features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
     boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
                    pad='same', act=False)
 
-    features = perform_conv(inp=l_features, filt=256, kern=3, stri=2, pad='same')
-    features = tf.concat([features, m_features], axis=-1)
-    for i in range(2):
-        features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-    m_feartures = features
-
-    # Produce the second set of bounding boxes
-    features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
-                          pad='same', act=False)
-
-    features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
-    features = tf.concat([features, s_features], axis=-1)
-    for i in range(2):
-        features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
-
-    # Produce the third set of bounding boxes
-    features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
-                          pad='same', act=False)
+    # features = perform_conv(inp=l_features, filt=256, kern=3, stri=2, pad='same')
+    # features = tf.concat([features, m_features], axis=-1)
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    # m_feartures = features
+    #
+    # # Produce the second set of bounding boxes
+    # features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
+    # boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    #                       pad='same', act=False)
+    #
+    # features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
+    # features = tf.concat([features, s_features], axis=-1)
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
+    #
+    # # Produce the third set of bounding boxes
+    # features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
+    # boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    #                       pad='same', act=False)
 
     # Heads: YOLOv3
     # Needs to end in a 13x13x10 array
 
     # Maybe use conv results and produces, small, medium, and large boxes separtately
     # return boxes1, boxes2, boxes3
-    return boxes3
+    return boxes1
+
+def run_one_layer(inp):
+    working_data = inp
+    features = perform_conv(inp=working_data, filt=256, kern=3, stri=2, pad='valid')
+    boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+                          pad='same', act=False)
+    return boxes1
