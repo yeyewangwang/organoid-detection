@@ -35,7 +35,6 @@ def generate_anchors(train_labels_dict, num_anchors):
 
     anchors = kmeans_model.cluster_centers_.astype(int)
 
-    # TODO cache results
     return anchors
 
 
@@ -127,7 +126,7 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     return tf.convert_to_tensor(result)
 
 
-# return tensor of shape (N, 13, 13, 10, 5)
+# return list of tensors of shape (13, 13, 10, 5)
 def encode_all_bboxes(train_labels_dict, anchors, dims):
     n = len(train_labels_dict)
     img_width, img_height, grid_dim = dims
@@ -142,26 +141,20 @@ def encode_all_bboxes(train_labels_dict, anchors, dims):
     return out
 
 
-def load_anchors():
-    # TODO
-    return
-
-
 
 # Given NN output and INDICES OF CELL/PRIOR COMBOS TO ACTUALLY PREDICT FOR,
-# return bounding box predictions for those indices
-# TODO make sure we use TF operations
+# return bounding box predictions for those indices.
+# indices should be a tensor of shape (n, 3) -- a vector of (x,y,anchor) for each box
 def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
     img_width, img_height, grid_dim = dims
     cell_width = int(img_width / grid_dim)
     cell_height = int(img_height / grid_dim)
 
-    num_anchors = anchors.shape[0]
+    t = tf.gather_nd(result, indices)
+    grid_x = indices[:,0]
+    grid_y = indices[:,1]
+    anchor_index = indices[:,2]
 
-    t = result[indices]
-
-    # the grid coords and anchors we predicted for
-    grid_x, grid_y, anchor_index = np.nonzero(indices)
     cx = grid_x * cell_width
     cy = grid_y * cell_height
     pw = anchors[anchor_index,0]
@@ -169,7 +162,6 @@ def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
 
     return t_to_b(t, cx, cy, pw, ph)
 
-# TODO make sure we use TF operations
 def t_to_b(t, cx, cy, pw, ph):
     tx = t[:,0]
     ty = t[:,1]
@@ -177,17 +169,16 @@ def t_to_b(t, cx, cy, pw, ph):
     th = t[:,3]
     to = t[:,4]
 
-    bx = expit(tx) + cx
-    by = expit(ty) + cy
-    bw = pw * np.exp(tw) # consider: making this numerically better-conditioned
-    bh = ph * np.exp(th)
+    bx = tf.math.sigmoid(tx) + cx
+    by = tf.math.sigmoid(ty) + cy
+    bw = pw * tf.math.exp(tw) # consider: making this numerically better-conditioned
+    bh = ph * tf.math.exp(th)
 
-    return np.hstack((bx, by, bw, bh))
+    return tf.stack([bx, by, bw, bh], axis = 1)
 
-# TODO make sure we use TF operations
 def xywh_to_yxyx(b):
-    y_min = (b[:,1] - b[:,3] / 2).astype(int)
-    y_max = (b[:,1] + b[:,3] / 2).astype(int)
-    x_min = (b[:,0] - b[:,2] / 2).astype(int)
-    x_max = (b[:,0] + b[:,2] / 2).astype(int)
-    return np.hstack((y_min, y_max, x_min, x_max))
+    y_min = tf.cast(b[:,1] - b[:,3] / 2, tf.int32)
+    y_max = tf.cast(b[:,1] + b[:,3] / 2, tf.int32)
+    x_min = tf.cast(b[:,0] - b[:,2] / 2, tf.int32)
+    x_max = tf.cast(b[:,0] + b[:,2] / 2, tf.int32)
+    return tf.stack([y_min, y_max, x_min, x_max], axis = 1)

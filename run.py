@@ -47,7 +47,7 @@ def main():
     # get ground truth outputs
     anchors = generate_anchors(train_labels, hp.num_anchors)
     # TODO: are these dimensions hyperparameters or hard coded?
-    dims = (hp.img_height, hp.img_width, 13)
+    dims = (hp.img_width, hp.img_height, 13)
     y = encode_all_bboxes(train_labels, anchors, dims)
 
     # start_time = time()
