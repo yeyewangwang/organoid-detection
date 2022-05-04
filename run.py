@@ -28,7 +28,9 @@ def images_dict_to_batch(images_dict):
     Convert images from dictionaries to
     a tensor of (batch size, img height, img width, number of color channels)
     """
-    return np.ndarray(list(images_dict.values()))
+    img_array = np.asarray(list(images_dict.values()))
+    print("Input dimensions:", img_array.shape)
+    return img_array
 
 def main():
     data_dir = "data"
@@ -50,11 +52,11 @@ def main():
     dims = (hp.img_width, hp.img_height, 13)
     y = encode_all_bboxes(train_labels, anchors, dims)
 
-    # start_time = time()
-    # train_images = images_dict_to_batch(train_images)
-    # test_images = images_dict_to_batch(test_images)
-    # end_time = time()
-    # print(f'Image loading took {end_time - start_time}s.')
+    start_time = time.time()
+    train_images = images_dict_to_batch(train_images)
+    test_images = images_dict_to_batch(test_images)
+    end_time = time.time()
+    print(f'Image loading took {end_time - start_time}s.')
 
     # TODO: un-hardcode training hyperparameters
     lambda_coord = 1
@@ -67,7 +69,8 @@ def main():
     # model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
-    for i in hp.num_epochs:
+    for i in range(hp.num_epochs):
+        print(f"num epochs: {i}")
         with tf.GradientTape() as tape:
             yhat = model(train_images, training = True)
             loss = yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims)
