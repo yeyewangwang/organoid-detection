@@ -15,7 +15,6 @@ def get_boxes(train_labels_dict):
     boxes_list = list(map(lambda x: list(x.values()), boxes))
     return np.array(boxes_list)
 
-
 # Generate anchors using k means
 # Ideally this would be done using IOU as a distance metric,
 # since Euclidean distance is biased against large boxes.
@@ -125,7 +124,22 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
     result[grid_x, grid_y, best_iou_index, :] = preds
 
-    return result
+    return tf.convert_to_tensor(result)
+
+
+# return tensor of shape (N, 13, 13, 10, 5)
+def encode_all_bboxes(train_labels_dict, anchors, dims):
+    n = len(train_labels_dict)
+    img_width, img_height, grid_dim = dims
+    num_anchors = anchors.shape[0]
+    out = []
+
+    for box_list in train_labels_dict.values():
+        box_array = np.array(list(map(lambda x: list(x.values()), box_list)))
+        result = encode_bboxes(box_array, anchors, dims)
+        out.append(result)
+    
+    return out
 
 
 def load_anchors():
@@ -136,6 +150,7 @@ def load_anchors():
 
 # Given NN output and INDICES OF CELL/PRIOR COMBOS TO ACTUALLY PREDICT FOR,
 # return bounding box predictions for those indices
+# TODO make sure we use TF operations
 def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
     img_width, img_height, grid_dim = dims
     cell_width = int(img_width / grid_dim)
@@ -154,7 +169,7 @@ def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
 
     return t_to_b(t, cx, cy, pw, ph)
 
-    
+# TODO make sure we use TF operations
 def t_to_b(t, cx, cy, pw, ph):
     tx = t[:,0]
     ty = t[:,1]
@@ -169,6 +184,7 @@ def t_to_b(t, cx, cy, pw, ph):
 
     return np.hstack((bx, by, bw, bh))
 
+# TODO make sure we use TF operations
 def xywh_to_yxyx(b):
     y_min = (b[:,1] - b[:,3] / 2).astype(int)
     y_max = (b[:,1] + b[:,3] / 2).astype(int)
