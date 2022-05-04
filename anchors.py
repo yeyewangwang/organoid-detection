@@ -177,8 +177,9 @@ def t_to_b(t, cx, cy, pw, ph):
     return tf.stack([bx, by, bw, bh], axis = 1)
 
 def xywh_to_yxyx(b):
+    # y_min, x_min, y_max, x_max
     y_min = b[:,1] - tf.cast(b[:,3] / 2, tf.int64)
     y_max = b[:,1] + tf.cast(b[:,3] / 2, tf.int64)
     x_min = b[:,0] - tf.cast(b[:,2] / 2, tf.int64)
     x_max = b[:,0] + tf.cast(b[:,2] / 2, tf.int64)
-    return tf.stack([y_min, y_max, x_min, x_max], axis = 1)
+    return tf.stack([y_min, x_min, y_max, x_max], axis = 1)
