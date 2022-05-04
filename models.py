@@ -1,7 +1,6 @@
 import hyperparameters as hp
 import keras
 import tensorflow as tf
-from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPool2D, Flatten, BatchNormalization
 
 
@@ -53,7 +52,7 @@ def perform_upsample(inp, scale):
 # OUTPUT:
 #   TBD? out (numpy array) - final array after running model
 def run_yolov4(inp):
-    working_data = keras.Input(shape=(hp.img_height, hp.img_width))(inp)
+    working_data = inp
 
     # Backbone: CSPDarknet53 (53 convolutional layers) used in the yolov4
     # https://github.com/hunglc007/tensorflow-yolov4-tflite/blob/master/core/backbone.py

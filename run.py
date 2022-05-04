@@ -4,7 +4,7 @@ import tensorflow as tf
 from preprocess import get_data
 from anchors import *
 from models import run_yolov4
-from hyperparameters import hp
+import hyperparameters as hp
 from train import yolo_loss
 
 def parse_args():
@@ -20,6 +20,12 @@ def parse_args():
         help='''TBD''')
 
     return parser.parse_args()
+
+def images_dict_to_batch(images_dict):
+    """
+    Convert images from dictionaries to batch size.
+    """
+    return tf.convert_to_tensor(list(images_dict.values()))
 
 def main():
     data_dir = "data"
@@ -43,12 +49,17 @@ def main():
     else:
         anchors = load_anchors()
 
+    train_images = images_dict_to_batch(train_images)
+    test_images = images_dict_to_batch(test_images)
+
     #train the model
-    input = tf.keras.layers.Input([hp.img_height, hp.img_size, 3])
+    input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
     conv_boxes = run_yolov4(input)
     # Add a function to process yolo_v4 convolution results into boxes
     bboxes = conv_boxes
     model = tf.keras.Model(input, bboxes)
+    model.summary()
+
     optimizer = tf.keras.optimizers.Adam()
 
     for i in hp.epochs:
@@ -57,7 +68,8 @@ def main():
             # loss
             # What are these values?
             yhat, lambda_coord, lambda_noobj, dims = None, None, None, None
-            loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+            # loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+            loss = 0.01
             gradients = tape.gradient(loss, model.trainable_variables)
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
