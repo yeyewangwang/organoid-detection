@@ -92,7 +92,7 @@ def main():
                 yhat = model(img_batch, training = True)
                 yhat = tf.reshape(yhat, [hp.batch_size, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
                 curr_loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, anchors, dims)
-                gradients = tape.gradient(loss, model.trainable_variables)
+                gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                 print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
