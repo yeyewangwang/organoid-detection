@@ -17,3 +17,5 @@ max_num_weights = 5
 optimizer = 'Adam'
 
 early_stop = 30
+
+num_anchors = 10

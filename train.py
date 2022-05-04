@@ -3,20 +3,19 @@ from anchors import *
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
-    sum = 0
-    for i in range(tf.shape(y)[0].numpy()):
-        sum += yolo_loss_single(y[i], yhat[i], lambda_coord, lambda_noobj, anchors, dims)
-    return sum
 
-# TODO convert to tensor operations
-# y and yhat have shape (grid_dim, grid_dim, num_anchors, 5)
-def yolo_loss_single(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
+# y and yhat are lists of tensors of shape (grid_dim, grid_dim, num_anchors, 5)
+def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     img_width, img_height, grid_dim = dims
-    # get coordinates of cell-anchors that actually have an object.
-    # shape should be (n, 3)
-    object_indices = tf.where(y[:,:,:,4] == 1)
-    no_object_indices = tf.where(y[:,:,:,4] == 0)
+
+    # tensorize
+    y = tf.stack(y, axis = 0)
+    yhat = tf.stack(yhat, axis = 0)
+
+    # get coordinates of cinput-cell-anchors that actually have an object.
+    # shape should be (d, 4) if there are d boxes total
+    object_indices = tf.where(y[:,:,:,:,4] == 1)
+    no_object_indices = tf.where(y[:,:,:,:,4] == 0)
 
     # bounding box loss:
     # for each GROUND TRUTH BOX,

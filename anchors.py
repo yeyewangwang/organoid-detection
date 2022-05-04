@@ -144,16 +144,17 @@ def encode_all_bboxes(train_labels_dict, anchors, dims):
 
 # Given NN output and INDICES OF CELL/PRIOR COMBOS TO ACTUALLY PREDICT FOR,
 # return bounding box predictions for those indices.
-# indices should be a tensor of shape (n, 3) -- a vector of (x,y,anchor) for each box
+# indices should be a tensor of shape (n, 4) --
+# each row is a vector of (input,x,y,anchor) for each box
 def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
     img_width, img_height, grid_dim = dims
     cell_width = int(img_width / grid_dim)
     cell_height = int(img_height / grid_dim)
 
     t = tf.gather_nd(result, indices)
-    grid_x = indices[:,0]
-    grid_y = indices[:,1]
-    anchor_index = indices[:,2]
+    grid_x = indices[:,1]
+    grid_y = indices[:,2]
+    anchor_index = indices[:,3]
 
     cx = grid_x * cell_width
     cy = grid_y * cell_height
