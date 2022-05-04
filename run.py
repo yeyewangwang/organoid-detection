@@ -33,39 +33,36 @@ def main():
     print("Data retrieved!")
     #print("Checking that images have been resized...")
     #print((300,300) == train_images[0].size)
+    
+    
+    # get ground truth outputs
+    anchors = generate_anchors(train_labels, hp.num_anchors)
+    # TODO: are these dimensions hyperparameters or hard coded?
+    dims = (300, 300, 13)
+    y = encode_all_bboxes(train_labels, anchors, dims)
 
-    # TODO make this an arg
-    # TODO make num_anchors an arg
-    calculate_anchors = True
-    num_anchors = 10
-    if calculate_anchors:
-        anchors = generate_anchors(train_labels, num_anchors)
-    else:
-        anchors = load_anchors()
 
-    #train the model
+    # TODO: un-hardcode training hyperparameters
+    lambda_coord = 1
+    lambda_noobj = 1
+
+    # train the model
+    # TODO: Shoudln't this be width & height??
     input = tf.keras.layers.Input([hp.img_height, hp.img_size, 3])
-    conv_boxes = run_yolov4(input)
-    # Add a function to process yolo_v4 convolution results into boxes
-    bboxes = conv_boxes
-    model = tf.keras.Model(input, bboxes)
+    output = run_yolov4(input)
+    model = tf.keras.Model(input, output)
     optimizer = tf.keras.optimizers.Adam()
 
     for i in hp.epochs:
         with tf.GradientTape() as tape:
-            preds = model(train_images, training=True)
-            # loss
-            # What are these values?
-            yhat, lambda_coord, lambda_noobj, dims = None, None, None, None
-            loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+            yhat = model(train_images, training = True)
+            loss = yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims)
             gradients = tape.gradient(loss, model.trainable_variables)
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-    #test the model
-    preds = model(test_images, training=False)
-    # What are these values?
-    yhat, lambda_coord, lambda_noobj, dims = None, None, None, None
-    loss = yolo_loss(preds, yhat, lambda_coord, lambda_noobj, anchors, dims)
+    # test the model
+    yhat = model(test_images, training=False)
+    loss = yolo_loss(y, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
     print(f"Testing loss {loss}")
 
 if __name__ == "__main__":

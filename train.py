@@ -3,9 +3,13 @@ from anchors import *
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-
-# y and yhat have shape (grid_dim, grid_dim, num_anchors, 5)
 def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
+    # TODO: sum up yolo_loss_single for each element in y, yhat
+    return 0
+
+# TODO convert to tensor operations
+# y and yhat have shape (grid_dim, grid_dim, num_anchors, 5)
+def yolo_loss_single(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     img_width, img_height, grid_dim = dims
     object_indices = y[:,:,:,4] == 1
 
@@ -15,7 +19,8 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_indices, anchors, dims))
     yhat_object_bb = xywh_to_yxyx(decode_bboxes(yhat, object_indices, anchors, dims))
     gl = tfa.losses.GIoULoss()
-    iou_loss = gl(y_object_bb, yhat_object_bb)    
+    iou_loss = gl(y_object_bb, yhat_object_bb)  
+
 
     # objectness loss where there is an object: logistic objective.
     y_object_to = y[object_indices, 4]
