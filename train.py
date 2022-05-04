@@ -8,9 +8,9 @@ import tensorflow_addons as tfa
 def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     img_width, img_height, grid_dim = dims
 
-    # tensorize
+    # tensorize y
     y = tf.stack(y, axis = 0)
-    yhat = tf.stack(yhat, axis = 0)
+    yhat = tf.cast(yhat, tf.float64)
 
     # get coordinates of cinput-cell-anchors that actually have an object.
     # shape should be (d, 4) if there are d boxes total

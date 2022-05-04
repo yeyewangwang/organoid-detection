@@ -18,4 +18,6 @@ optimizer = 'Adam'
 
 early_stop = 30
 
-num_anchors = 10
+num_anchors = 3
+
+grid_dim = 149

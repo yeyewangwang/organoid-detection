@@ -59,7 +59,7 @@ def main():
     # get ground truth outputs
     anchors = generate_anchors(train_labels, hp.num_anchors)
     # TODO: is the 13 a hyperparameter or hard coded?
-    dims = (hp.img_width, hp.img_height, 13)
+    dims = (hp.img_width, hp.img_height, hp.grid_dim)
     y = encode_all_bboxes(train_labels, anchors, dims)
 
     start_time = time.time()
@@ -90,10 +90,12 @@ def main():
 
             with tf.GradientTape() as tape:
                 yhat = model(img_batch, training = True)
-                loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, anchors, dims)
+                yhat = tf.reshape(yhat, [hp.batch_size, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
+                curr_loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, anchors, dims)
                 gradients = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-            loss.append(loss)
+                print('WE GOT A TRAINING STEP IN PEOPLE')
+            loss.append(curr_loss)
         print(f"loss = {np.mean(loss)}")
     # test the model
     yhat = model(test_images, training=False)
