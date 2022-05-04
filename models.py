@@ -15,7 +15,7 @@ from keras.layers import Dense, Conv2D, MaxPool2D, Flatten, BatchNormalization
 #   bat (boolean) - whether to use batch normalization
 # OUTPUT:
 #   working_array (numpy array) - resulting numpy array after performing convolutions
-def perform_conv(inp, filt, kern, stri, pad, act=True, bat=True):
+def perform_conv(inp, filt, kern, stri, pad, act=True, bat=False):
     working_array = inp
 
     # maybe add whether to use bias, kernel regularizer, kernel initializer, bias initializer

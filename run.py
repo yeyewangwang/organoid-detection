@@ -69,10 +69,10 @@ def main():
     # model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
-    for i in range(2):
+    for i in range(hp.num_epochs):
+        print(f"num epochs: {i}")
         with tf.GradientTape() as tape:
             yhat = model(train_images, training = True)
-            print(yhat.shape)
             loss = yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims)
             gradients = tape.gradient(loss, model.trainable_variables)
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))
