@@ -97,6 +97,8 @@ def main():
                 print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
         print(f"loss = {np.mean(loss)}")
+        #reset the data generator
+        train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
     # test the model
     yhat = model(test_images, training=False)
     loss = yolo_loss(y, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
