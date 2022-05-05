@@ -62,6 +62,8 @@ def main():
     print("Now training the model...")
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
     output = run_yolov4(input)
+    print(output.shape)
+    #Maybe here set a parameter to use for the grid dim based on the model shape instead of hardcoding it
     model = tf.keras.Model(input, output)
     
     # Testing for just the training, testing, and loss on a simplified model

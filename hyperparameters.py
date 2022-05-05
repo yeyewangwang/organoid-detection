@@ -20,4 +20,4 @@ early_stop = 30
 
 num_anchors = 3
 
-grid_dim = 8
+grid_dim = 149
