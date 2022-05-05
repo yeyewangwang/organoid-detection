@@ -42,9 +42,14 @@ def main():
 
     # HYPERPARAMETER SETTING
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
-    output = run_yolov4(input)
+    #output = run_yolov4(input)
+
+    # Testing for just the training, testing, and loss on a simplified model
+    output = run_one_layer(input)
+
     print(output.shape)
-    #Maybe here set a parameter to use for the grid dim based on the model shape instead of hardcoding it
+    
+    #Set a parameter to use for the grid dim based on the model shape instead of hardcoding it
     grid_dim = output.shape[2]
     model = tf.keras.Model(input, output)
 
@@ -56,10 +61,6 @@ def main():
     train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
     end_time = time.time()
     print(f'Image loading took {end_time - start_time}s.')
-    
-    # Testing for just the training, testing, and loss on a simplified model
-    # simple_output = run_one_layer(input)
-    # model = tf.keras.Model(input, simple_output)
 
     model.summary()
     optimizer = tf.keras.optimizers.Adam()
@@ -69,6 +70,7 @@ def main():
     start_time = time.time()
     for i in range(hp.num_epochs):
         loss = []
+        batch_accuracies = []
         print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
             print(f"num batch {j}")
@@ -80,22 +82,23 @@ def main():
                 curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims))
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
-        print(f"epoch = {i} loss = {np.mean(loss)}")
+        print(f"epoch = {i} loss = {np.mean(loss)} accuracy = {np.mean(batch_accuracies)}")
         curr_time = time.time()
         print(f"epoch {i} took {curr_time - start_time}s")
         start_time = curr_time
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
     print("Trained the model!")
-    #TODO: Print the accuracy for training set
 
     # test the model
     print("Now testing...")
     y_test = encode_all_bboxes(test_labels, anchors, dims)
     test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
     test_loss = []
+    batch_accuracies = []
     
     for j, data in enumerate(test_data_gen):
         print(f"Test num batch {j}")
@@ -104,10 +107,12 @@ def main():
         yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
+        batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims))
     print(f"Testing loss {np.mean(test_loss)}")
-    #TODO: Print the accuracy for testing set
+    #Print the accuracy for testing set
+    print("Accuracy for testing set is " + str(np.mean(batch_accuracies)))
 
-    #Add in code to quantify the organoids
 
 if __name__ == "__main__":
+
     main()

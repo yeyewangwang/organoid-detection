@@ -45,7 +45,7 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
 #box 1 has format y_min, x_min, y_max, x_max
 #box 2 has format y_min, x_min, y_max, x_max
 #return float that has the iou for box1 and box2
-def iou(box1, box2):
+def calculate_iou(box1, box2):
     #find coordinates for intersecting rectangle
     ymin = max(box1[0], box2[0])
     xmin = max(box1[1], box2[1])
@@ -58,11 +58,13 @@ def iou(box1, box2):
     box2_area = (box2[3] - box2[1]) * (box2[2] - box2[0])
     union_area = box1_area + box2_area - intersecting_area
 
-    return float(intersecting_area / union_area)
+    return intersecting_area / union_area
 
     
 # get the accuracy of how many boxes have been properly predicted
-def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5):
+# threshold is for whether our model thinks it's a box
+# iou is for whether we consider the iou score enough overlap to count as an accurate prediction
+def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5, iou = 0.7):
     img_width, img_height, grid_dim = dims
 
     y = tf.stack(y, axis = 0)
@@ -85,18 +87,16 @@ def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5):
         for predicted_index in range(num_predict_bb):
             actual_box = y_object_bb[actual_index]
             predicted_box = yhat_prediction_bb[predicted_index]
-            iou_actual_prediction_matrix[actual_index, predicted_index] = iou(actual_box, predicted_box)
+            iou_actual_prediction_matrix[actual_index, predicted_index] = calculate_iou(actual_box, predicted_box)
 
-    #each row has the index of the best predicted box for the corresponding row's actual box
-    best_predicted_boxes = np.argmax(iou_actual_prediction_matrix, axis=1)
+    #find the maximum values of iou in the matrix
+    print(iou_actual_prediction_matrix.shape)
+    #ERROR COMES UP HERE
+    best_predicted_boxes = np.max(iou_actual_prediction_matrix, axis=1)
 
-    #decide whether it's strong enough iou to be counted - does it meet the threshold set?
-    #working on this
-
-    #if so, count it
-    count = 0
-
-    #how do we handle if there's the same predicted box that is best for the actual box
+    #decide whether it's strong enough iou to be counted - does it meet the iou cutoff set?
+    #if there's the same predicted box that is best for multiple actual boxes, we still count it
+    count = np.sum(best_predicted_boxes > iou)
 
     #return the percentage of actual boxes that were predicted
     return count / num_actual_bb
