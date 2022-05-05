@@ -38,11 +38,14 @@ def main():
         path_to_training_labels=data_dir + "/train_labels.csv",
     )
     print("Data retrieved!")
-    
+
+    print("Getting ground truth outputs...")
     # get ground truth outputs
     anchors = generate_anchors(train_labels, hp.num_anchors)
     # TODO: is the 13 a hyperparameter or hard coded?
     dims = (hp.img_width, hp.img_height, hp.grid_dim)
+    print("Dims is: " + str(dims))
+    print("About to break here **********")
     y = encode_all_bboxes(train_labels, anchors, dims)
 
 
@@ -59,9 +62,12 @@ def main():
     print("Now training the model...")
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
     output = run_yolov4(input)
-    simple_output = run_one_layer(input)
-    # model = tf.keras.Model(input, output)
-    model = tf.keras.Model(input, simple_output)
+    model = tf.keras.Model(input, output)
+    
+    # Testing for just the training, testing, and loss on a simplified model
+    # simple_output = run_one_layer(input)
+    # model = tf.keras.Model(input, simple_output)
+
     model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
@@ -100,6 +106,7 @@ def main():
         print(f"Test num batch {j}")
         img_batch, y_batch = data
         yhat = model(img_batch, training=False)
+        print(yhat.shape)
         yhat = tf.reshape(yhat, [-1, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
         loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, test_anchors, dims)
         test_loss.append(loss)
