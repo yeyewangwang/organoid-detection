@@ -91,14 +91,14 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     bh = box_array[:,3] - box_array[:,2]
 
     # assign grid coordinates to boxes aka cx and cy
-    grid_x = np.floor_divide(bx, cell_width)
-    grid_y = np.floor_divide(by, cell_height)
+    grid_x = np.minimum(np.floor_divide(bx, cell_width), grid_dim - 1)
+    grid_y = np.minimum(np.floor_divide(by, cell_height), grid_dim - 1)
     cx = grid_x * cell_width
     cy = grid_y * cell_height
 
     # get offset coordinates aka sigma_tx and sigma_ty
-    sigma_tx = np.remainder(bx, cell_width)
-    sigma_ty = np.remainder(by, cell_height)
+    sigma_tx = np.minimum(bx - cx, cell_width - 1)
+    sigma_ty = np.minimum(by - cy, cell_height - 1)
 
     # get best anchor for each input bbox
     iou = IOU_nocenter(box_array, anchors)
@@ -110,8 +110,8 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     ph = anchors[best_iou_index,1]
 
     # finally we are ready to calculate "ground truth predictions"
-    tx = logit((bx - cx)/cell_width).reshape(-1,1)
-    ty = logit((by - cy)/cell_height).reshape(-1,1)
+    tx = logit((sigma_tx)/cell_width).reshape(-1,1)
+    ty = logit((sigma_ty)/cell_height).reshape(-1,1)
     tw = np.log(bw / pw).reshape(-1,1)
     th = np.log(bh / ph).reshape(-1,1)
     to = np.ones((num_boxes, 1))
