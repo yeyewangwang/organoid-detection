@@ -40,4 +40,64 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     
     return lambda_coord * iou_loss + objectness_loss + lambda_noobj * no_objectness_loss
 
+
+#get the intersection over union for two different boxes
+#box 1 has format y_min, x_min, y_max, x_max
+#box 2 has format y_min, x_min, y_max, x_max
+#return float that has the iou for box1 and box2
+def iou(box1, box2):
+    #find coordinates for intersecting rectangle
+    ymin = max(box1[0], box2[0])
+    xmin = max(box1[1], box2[1])
+    ymax = min(box1[2], box2[2])
+    xmax = min(box1[3], box2[3])
+
+    intersecting_area = max((xmax - xmin) * (ymax - ymin), 0)
+
+    box1_area = (box1[3] - box1[1]) * (box1[2] - box1[0])
+    box2_area = (box2[3] - box2[1]) * (box2[2] - box2[0])
+    union_area = box1_area + box2_area - intersecting_area
+
+    return float(intersecting_area / union_area)
+
     
+# get the accuracy of how many boxes have been properly predicted
+def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5):
+    img_width, img_height, grid_dim = dims
+
+    y = tf.stack(y, axis = 0)
+    yhat = tf.cast(yhat, tf.float64)
+
+    object_indices = tf.where(y[:,:,:,:,4] == 1)
+    prediction_indices = tf.where(yhat[:,:,:,:,4] > threshold)
+
+    #each row here is a box
+    #each row is y_min, x_min, y_max, x_max
+    y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_indices, anchors, dims))
+    yhat_prediction_bb = xywh_to_yxyx(decode_bboxes(yhat, prediction_indices, anchors, dims))
+
+    #create matrix where actual bounding boxes are rows, predicted bounding boxes are columns
+    #find the iou for each combination
+    num_actual_bb = y_object_bb.shape[0]
+    num_predict_bb = yhat_prediction_bb.shape[0]
+    iou_actual_prediction_matrix = np.empty((num_actual_bb, num_predict_bb))
+    for actual_index in range(num_actual_bb):
+        for predicted_index in range(num_predict_bb):
+            actual_box = y_object_bb[actual_index]
+            predicted_box = yhat_prediction_bb[predicted_index]
+            iou_actual_prediction_matrix[actual_index, predicted_index] = iou(actual_box, predicted_box)
+
+    #find the best predicted box for the actual box
+    #use np.argmax here, I always mess up axes
+
+    #decide whether it's strong enough iou to be counted - does it meet the threshold set?
+
+    #if so, count it
+    count = 0
+
+    #how do we handle if there's the same predicted box that is best for the actual box
+
+    #return the percentage of actual boxes that were predicted
+    return count / num_actual_bb
+
+

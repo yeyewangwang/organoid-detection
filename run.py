@@ -7,7 +7,7 @@ from preprocess import get_data
 from anchors import *
 from models import run_yolov4, run_one_layer
 import hyperparameters as hp
-from train import yolo_loss
+from train import *
 
 
 def img_y_to_batch(images_dict, y, batch_size=32):
@@ -67,7 +67,7 @@ def main():
     # train the model
     print("Now training the model...")
     start_time = time.time()
-    for i in range(0):
+    for i in range(hp.num_epochs):
         loss = []
         print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
@@ -89,6 +89,7 @@ def main():
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
     print("Trained the model!")
+    #TODO: Print the accuracy for training set
 
     # test the model
     print("Now testing...")
@@ -100,11 +101,11 @@ def main():
         print(f"Test num batch {j}")
         img_batch, y_batch = data
         yhat = model(img_batch, training=False)
-        print(yhat.shape)
         yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
     print(f"Testing loss {np.mean(test_loss)}")
+    #TODO: Print the accuracy for testing set
 
     #Add in code to quantify the organoids
 
