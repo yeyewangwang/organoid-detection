@@ -123,12 +123,6 @@ def get_data(
     path_to_testing_labels,
     augment=False,
 ):
-    # print("Getting training images...")
-    # train_images, train_scales = get_images(path_to_training_data, augment)
-    # print("Found " + str(len(train_images)) + " train images")
-    # print("Getting testing images...")
-    # test_images, test_scales = get_images(path_to_testing_data, augment)
-    # print("Found " + str(len(test_images)) + " test images")
     print("Getting training labels...")
     train_labels = get_bounding_box_labels(path_to_training_labels)
     print("Found " + str(len(train_labels)) + " train images with organoid labels")

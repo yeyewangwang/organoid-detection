@@ -9,19 +9,6 @@ from models import run_yolov4, run_one_layer
 import hyperparameters as hp
 from train import yolo_loss
 
-def parse_args():
-    """ Perform command-line argument parsing. """
-
-    parser = argparse.ArgumentParser(
-        description="Adding argument parser",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        '--an_argument',
-        required=True,
-        choices=['1', '3'],
-        help='''TBD''')
-
-    return parser.parse_args()
 
 def img_y_to_batch(images_dict, y, batch_size=32):
     """
@@ -51,9 +38,6 @@ def main():
         path_to_training_labels=data_dir + "/train_labels.csv",
     )
     print("Data retrieved!")
-    #print("Checking that images have been resized...")
-    #print((300,300) == train_images[0].size)
-    
     
     # get ground truth outputs
     anchors = generate_anchors(train_labels, hp.num_anchors)
@@ -72,6 +56,7 @@ def main():
     lambda_noobj = 1
 
     # train the model
+    print("Now training the model...")
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
     output = run_yolov4(input)
     simple_output = run_one_layer(input)
@@ -102,12 +87,15 @@ def main():
         start_time = curr_time
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
+    print("Trained the model!")
 
+    # test the model
+    print("Now testing...")
     test_anchors = generate_anchors(test_labels, hp.num_anchors)
     y_test = encode_all_bboxes(test_labels, test_anchors, dims)
     test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
     test_loss = []
-    # test the model
+    
     for j, data in enumerate(test_data_gen):
         print(f"Test num batch {j}")
         img_batch, y_batch = data
@@ -117,7 +105,7 @@ def main():
         test_loss.append(loss)
     print(f"Testing loss {np.mean(test_loss)}")
 
-if __name__ == "__main__":
-    #parse_args()
+    #Add in code to quantify the organoids
 
+if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ img_width = 300
 batch_size = 10
 
 #Parameters for models
-num_epochs = 50
+num_epochs = 1
 
 learning_rate = 1e-3
 
