@@ -184,6 +184,6 @@ def run_yolov4(inp):
 def run_one_layer(inp):
     working_data = inp
     features = perform_conv(inp=working_data, filt=256, kern=3, stri=2, pad='valid')
-    boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    boxes1 = perform_conv(inp=features, filt=hp.num_anchors * 5, kern=1, stri=1,
                           pad='same', act=False)
     return boxes1

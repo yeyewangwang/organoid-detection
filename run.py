@@ -33,7 +33,6 @@ def img_y_to_batch(images_dict, y, batch_size=32):
     last_i = 0
     for i in range(0, len(img_list), batch_size):
         batch_imgs = np.asarray(img_list[i:i+batch_size])
-        print("input dimensions:", batch_imgs.shape)
         yield batch_imgs, y[i:i+batch_size]
         last_i += batch_size
     if last_i < len(img_list):
@@ -62,9 +61,9 @@ def main():
     dims = (hp.img_width, hp.img_height, hp.grid_dim)
     y = encode_all_bboxes(train_labels, anchors, dims)
 
+
     start_time = time.time()
     train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
-    # test_images = images_dict_to_batch(test_images, y, hp.batch_size)
     end_time = time.time()
     print(f'Image loading took {end_time - start_time}s.')
 
@@ -81,9 +80,10 @@ def main():
     model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
-    for i in range(hp.num_epochs):
+    start_time = time.time()
+    for i in range(0):
         loss = []
-        print(f"num epochs: {i}")
+        print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
             print(f"num batch {j}")
             img_batch, y_batch = data
@@ -94,15 +94,28 @@ def main():
                 curr_loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                print('WE GOT A TRAINING STEP IN PEOPLE')
+                # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
-        print(f"loss = {np.mean(loss)}")
+        print(f"epoch = {i} loss = {np.mean(loss)}")
+        curr_time = time.time()
+        print(f"epoch {i} took {curr_time - start_time}s")
+        start_time = curr_time
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
+
+    test_anchors = generate_anchors(test_labels, hp.num_anchors)
+    y_test = encode_all_bboxes(test_labels, test_anchors, dims)
+    test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
+    test_loss = []
     # test the model
-    yhat = model(test_images, training=False)
-    loss = yolo_loss(y, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
-    print(f"Testing loss {loss}")
+    for j, data in enumerate(test_data_gen):
+        print(f"Test num batch {j}")
+        img_batch, y_batch = data
+        yhat = model(img_batch, training=False)
+        yhat = tf.reshape(yhat, [-1, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
+        loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, test_anchors, dims)
+        test_loss.append(loss)
+    print(f"Testing loss {np.mean(test_loss)}")
 
 if __name__ == "__main__":
     #parse_args()
