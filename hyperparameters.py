@@ -21,3 +21,7 @@ early_stop = 30
 num_anchors = 3
 
 grid_dim = 8
+
+lambda_coord = 1
+
+lambda_noobj = 1

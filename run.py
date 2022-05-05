@@ -39,32 +39,23 @@ def main():
     )
     print("Data retrieved!")
 
-    print("Getting ground truth outputs...")
-    # get ground truth outputs
-    anchors = generate_anchors(train_labels, hp.num_anchors)
-    # TODO: is the 13 a hyperparameter or hard coded?
-    dims = (hp.img_width, hp.img_height, hp.grid_dim)
-    print("Dims is: " + str(dims))
-    print("About to break here **********")
-    y = encode_all_bboxes(train_labels, anchors, dims)
 
-
-    start_time = time.time()
-    train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
-    end_time = time.time()
-    print(f'Image loading took {end_time - start_time}s.')
-
-    # TODO: un-hardcode training hyperparameters
-    lambda_coord = 1
-    lambda_noobj = 1
-
-    # train the model
-    print("Now training the model...")
+    # HYPERPARAMETER SETTING
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
     output = run_yolov4(input)
     print(output.shape)
     #Maybe here set a parameter to use for the grid dim based on the model shape instead of hardcoding it
+    grid_dim = output.shape[2]
     model = tf.keras.Model(input, output)
+
+    print("Getting ground truth outputs...")
+    anchors = generate_anchors(train_labels, hp.num_anchors)
+    dims = (hp.img_width, hp.img_height, grid_dim)
+    y = encode_all_bboxes(train_labels, anchors, dims)
+    start_time = time.time()
+    train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
+    end_time = time.time()
+    print(f'Image loading took {end_time - start_time}s.')
     
     # Testing for just the training, testing, and loss on a simplified model
     # simple_output = run_one_layer(input)
@@ -73,6 +64,8 @@ def main():
     model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
+    # train the model
+    print("Now training the model...")
     start_time = time.time()
     for i in range(0):
         loss = []
@@ -83,8 +76,8 @@ def main():
 
             with tf.GradientTape() as tape:
                 yhat = model(img_batch, training = True)
-                yhat = tf.reshape(yhat, [hp.batch_size, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
-                curr_loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, anchors, dims)
+                yhat = tf.reshape(yhat, [hp.batch_size, grid_dim, grid_dim, hp.num_anchors, 5])
+                curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
@@ -99,8 +92,7 @@ def main():
 
     # test the model
     print("Now testing...")
-    test_anchors = generate_anchors(test_labels, hp.num_anchors)
-    y_test = encode_all_bboxes(test_labels, test_anchors, dims)
+    y_test = encode_all_bboxes(test_labels, anchors, dims)
     test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
     test_loss = []
     
@@ -109,8 +101,8 @@ def main():
         img_batch, y_batch = data
         yhat = model(img_batch, training=False)
         print(yhat.shape)
-        yhat = tf.reshape(yhat, [-1, hp.grid_dim, hp.grid_dim, hp.num_anchors, 5])
-        loss = yolo_loss(y_batch, yhat, lambda_coord, lambda_noobj, test_anchors, dims)
+        yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
+        loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
     print(f"Testing loss {np.mean(test_loss)}")
 
