@@ -56,6 +56,7 @@ def run_yolov4(inp):
 
     # Backbone: Simplified CSPDarknet53 (53 convolutional layers) used in the yolov4
     working_data = perform_conv(inp=working_data, filt=32, kern=3, stri=1, pad='same')
+    #downsample from 256x256 to 128x128
     working_data = perform_conv(inp=working_data, filt=64, kern=3, stri=2, pad='valid')
 
     working_data = perform_conv(inp=working_data, filt=32, kern=1, stri=1, pad='same')
@@ -63,44 +64,42 @@ def run_yolov4(inp):
     # Note that filt2 in residual has to match with previous filter size
     working_data = perform_residual(inp=working_data, filt1=32, filt2=64,
                                     kern1=1, kern2=3, stri=1, pad='same')  # Residual
-
+    #downsample from 128x128 to 64x64
     working_data = perform_conv(inp=working_data, filt=128, kern=3, stri=2, pad='valid')
 
     for i in range(2):
         working_data = perform_conv(inp=working_data, filt=64, kern=1, stri=1, pad='same')
         working_data = perform_conv(inp=working_data, filt=128, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
         working_data = perform_residual(inp=working_data, filt1=64, filt2=128,
                                         kern1=1, kern2=3, stri=1, pad='same')  # Residual
-
+    #downsample from 64x64 to 32x32
     working_data = perform_conv(inp=working_data, filt=256, kern=3, stri=2, pad='valid')
 
     # TODO: possibly upsize here
     for i in range(8):
         working_data = perform_conv(inp=working_data, filt=128, kern=1, stri=1, pad='same')
         working_data = perform_conv(inp=working_data, filt=256, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=64, filt2=64 in cspdarknet
         working_data = perform_residual(inp=working_data, filt1=64, filt2=256,
                                         kern1=1, kern2=3, stri=1, pad='same')  # Residual
-    
+    #downsample from 32x32 to 16x16
     working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=2, pad='valid')
     
     for i in range(8):
         working_data = perform_conv(inp=working_data, filt=256, kern=1, stri=1, pad='same')
         working_data = perform_conv(inp=working_data, filt=512, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=256, filt2=256 in cspdarknet
         working_data = perform_residual(inp=working_data, filt1=256, filt2=512,
                                         kern1=1, kern2=3, stri=1, pad='same')  # Residual
-    
+    #downsample from 16x16 to 8x8
     working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=2, pad='valid')
     
     for i in range(4):
         working_data = perform_conv(inp=working_data, filt=512, kern=1, stri=1, pad='same')
         working_data = perform_conv(inp=working_data, filt=1024, kern=3, stri=1, pad='same')
-        # NOT SURE HOW TO MATCH WITH PREVIOUS STEP, filt1=512, filt2=512 in cspdarknet
         working_data = perform_residual(inp=working_data, filt1=512, filt2=1024,\
                                         kern1=1, kern2=3, stri=1, pad='same')  # Residual
 
+    # Shape is currently 8x8x1024
+    
     # Simplified ending of CSPDarknet53
     working_data = perform_conv(inp=working_data, filt=256, kern=1, stri=1, pad='same')
     l_features = working_data
@@ -113,6 +112,7 @@ def run_yolov4(inp):
     # Neck:
     # SSP (increase receptive field and separate most important features from backbone)
     # PANet (feature pyramid network extracting important features from backbone classifier)
+    # Heads: YOLOv3
     features = s_features
     features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
     # Upsample by 2 here
@@ -142,38 +142,36 @@ def run_yolov4(inp):
     features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
     boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
                    pad='same', act=False)
+    return boxes1
 
-    features = perform_conv(inp=l_features, filt=256, kern=3, stri=2, pad='same')
-    features = tf.concat([features, m_features], axis=-1)
-    for i in range(2):
-        features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
-    m_feartures = features
+    # features = perform_conv(inp=l_features, filt=256, kern=3, stri=2, pad='same')
+    # features = tf.concat([features, m_features], axis=-1)
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=256, kern=1, stri=1, pad='same')
+    # m_features = features
     
-    # Produce the second set of bounding boxes
-    features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
-                          pad='same', act=False)
+    # # Produce the second set of bounding boxes
+    # features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
+    # boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    #                       pad='same', act=False)
     
-    features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
-    features = tf.concat([features, s_features], axis=-1)
-    for i in range(2):
-        features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
-        features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
+    # features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
+    # features = tf.concat([features, s_features], axis=-1)
+    # for i in range(2):
+    #     features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
+    #     features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
+    # features = perform_conv(inp=features, filt=512, kern=1, stri=1, pad='same')
     
-    # Produce the third set of bounding boxes
-    features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
-                          pad='same', act=False)
-
-    # Heads: YOLOv3
-    # Needs to end in a 13x13x10 array
+    # # Produce the third set of bounding boxes
+    # features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
+    # boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    #                       pad='same', act=False)
 
     # Maybe use conv results and produces, small, medium, and large boxes separtately
     # return boxes1, boxes2, boxes3
-    return boxes1
+    
 
 # Simplified model just to test that our training, loss, and testing functions work
 # NOT USED for the actual model
