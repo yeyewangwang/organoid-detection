@@ -82,23 +82,27 @@ def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5, iou = 0.7):
     #find the iou for each combination
     num_actual_bb = y_object_bb.shape[0]
     num_predict_bb = yhat_prediction_bb.shape[0]
-    iou_actual_prediction_matrix = np.empty((num_actual_bb, num_predict_bb))
-    for actual_index in range(num_actual_bb):
-        for predicted_index in range(num_predict_bb):
-            actual_box = y_object_bb[actual_index]
-            predicted_box = yhat_prediction_bb[predicted_index]
-            iou_actual_prediction_matrix[actual_index, predicted_index] = calculate_iou(actual_box, predicted_box)
+    if num_predict_bb == 0:
+        print("No boxes predicted that met the threshold")
+        return 0.0
+    else:
+        iou_actual_prediction_matrix = np.empty((num_actual_bb, num_predict_bb))
+        for actual_index in range(num_actual_bb):
+            for predicted_index in range(num_predict_bb):
+                actual_box = y_object_bb[actual_index]
+                predicted_box = yhat_prediction_bb[predicted_index]
+                iou_actual_prediction_matrix[actual_index, predicted_index] = calculate_iou(actual_box, predicted_box)
 
-    #find the maximum values of iou in the matrix
-    print(iou_actual_prediction_matrix.shape)
-    #ERROR COMES UP HERE
-    best_predicted_boxes = np.max(iou_actual_prediction_matrix, axis=1)
+        #find the maximum values of iou in the matrix
+        print(iou_actual_prediction_matrix.shape)
+        #ERROR COMES UP HERE
+        best_predicted_boxes = np.max(iou_actual_prediction_matrix, axis=1)
 
-    #decide whether it's strong enough iou to be counted - does it meet the iou cutoff set?
-    #if there's the same predicted box that is best for multiple actual boxes, we still count it
-    count = np.sum(best_predicted_boxes > iou)
+        #decide whether it's strong enough iou to be counted - does it meet the iou cutoff set?
+        #if there's the same predicted box that is best for multiple actual boxes, we still count it
+        count = np.sum(best_predicted_boxes > iou)
 
-    #return the percentage of actual boxes that were predicted
-    return count / num_actual_bb
+        #return the percentage of actual boxes that were predicted
+        return count / num_actual_bb
 
 

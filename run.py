@@ -70,7 +70,6 @@ def main():
     start_time = time.time()
     for i in range(hp.num_epochs):
         loss = []
-        batch_accuracies = []
         print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
             print(f"num batch {j}")
@@ -82,10 +81,9 @@ def main():
                 curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims))
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
-        print(f"epoch = {i} loss = {np.mean(loss)} accuracy = {np.mean(batch_accuracies)}")
+        print(f"epoch = {i} loss = {np.mean(loss)}")
         curr_time = time.time()
         print(f"epoch {i} took {curr_time - start_time}s")
         start_time = curr_time
