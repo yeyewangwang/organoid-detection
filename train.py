@@ -87,10 +87,11 @@ def mean_avg_precision(y, yhat, anchors, dims, threshold = 0.5):
             predicted_box = yhat_prediction_bb[predicted_index]
             iou_actual_prediction_matrix[actual_index, predicted_index] = iou(actual_box, predicted_box)
 
-    #find the best predicted box for the actual box
-    #use np.argmax here, I always mess up axes
+    #each row has the index of the best predicted box for the corresponding row's actual box
+    best_predicted_boxes = np.argmax(iou_actual_prediction_matrix, axis=1)
 
     #decide whether it's strong enough iou to be counted - does it meet the threshold set?
+    #working on this
 
     #if so, count it
     count = 0
