@@ -25,8 +25,6 @@ def img_y_to_batch(images_dict, y, batch_size=32):
     if last_i < len(img_list):
         yield np.asarray(img_list[last_i:]), y[last_i:]
 
-    # img_array = np.asarray(list(images_dict.values()))
-    # return img_array
 
 def main(saved_weights_path="saved_weights/new_experiment",
          save_per_epoch=False,
@@ -88,11 +86,12 @@ def main(saved_weights_path="saved_weights/new_experiment",
     start_time = time.time()
     for i in range(num_epochs):
         loss = []
+        train_batch_maps = []
+        train_batch_mses = []
         print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
             # if j == 2:
             #     break
-
             print(f"num batch {j}")
             img_batch, y_batch = data
 
@@ -102,55 +101,49 @@ def main(saved_weights_path="saved_weights/new_experiment",
                 curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+                # If it's the last epoch and we want to evaluate how our training has done
+                if eval_train and i == num_epochs - 1:
+                    map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
+                    train_batch_maps.append(map_batch)
+                    train_batch_mses.append(mse_batch)
+
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
         print(f"epoch = {i} loss = {np.mean(loss)}")
         curr_time = time.time()
         print(f"epoch {i} took {curr_time - start_time}s")
+        # If it's the last epoch and we want to evaluate how our training has done
+        if eval_train and i == num_epochs - 1:
+            print("MAP for training set is " + str(np.mean(train_batch_maps)))
+            print("Quantization MSE for training set is " + str(np.mean(train_batch_mses)))
+
         start_time = curr_time
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
 
         # Save weights either per epoch or if last epoch
-        # if save_per_epoch or i == num_epochs - 1:
-        #     to_save_at = saved_weights_path
-        #     if save_per_epoch:
-        #         to_save_at = saved_weights_path.join("_e" + str(i))
+        if save_per_epoch or i == num_epochs - 1:
+            to_save_at = saved_weights_path
+            if save_per_epoch:
+                to_save_at = saved_weights_path + "_e" + str(i)
 
-        #     print("SAVING WEIGHTS AT " + to_save_at)
-        #     weight_file = Path(to_save_at)
-        #     weight_file.touch(exist_ok=True)
-        #     model.save_weights(weight_file)
-        #     print(f"epoch {i} weights saved at {to_save_at}")
-
+            print("SAVING WEIGHTS AT " + to_save_at)
+            weight_file = Path(to_save_at)
+            weight_file.touch(exist_ok=True)
+            model.save_weights(weight_file)
+            print(f"epoch {i} weights saved at {to_save_at}")
 
     if not test_only:
         print("Trained the model!")
-
-    if eval_train:
-        train_loss = []
-        batch_maps = []
-        match_mses = []
-        for j, data in enumerate(train_data_gen):
-            print(f"Test num batch {j}")
-            img_batch, y_batch = data
-            yhat = model(img_batch, training=False)
-            yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
-            map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
-            batch_maps.append(map_batch)
-            batch_mses.append(mse_batch)
-        print(f"Testing loss {np.mean(test_loss)}")
-        #Print the accuracy for testing set
-        print("MAP for testing set is " + str(np.mean(batch_maps)))
-        print("Quantization MSE for testing set is " + str(np.mean(batch_mses)))
 
     # test the model
     print("Now testing...")
     y_test = encode_all_bboxes(test_labels, anchors, dims)
     test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
     test_loss = []
-    batch_maps = []
-    batch_mses = []
+    test_batch_maps = []
+    test_batch_mses = []
     
     for j, data in enumerate(test_data_gen):
         print(f"Test num batch {j}")
@@ -160,18 +153,18 @@ def main(saved_weights_path="saved_weights/new_experiment",
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
         map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
-        batch_maps.append(map_batch)
-        batch_mses.append(mse_batch)
+        test_batch_maps.append(map_batch)
+        test_batch_mses.append(mse_batch)
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
-    print("MAP for testing set is " + str(np.mean(batch_maps)))
-    print("Quantization MSE for testing set is " + str(np.mean(batch_mses)))
+    print("MAP for testing set is " + str(np.mean(test_batch_maps)))
+    print("Quantization MSE for testing set is " + str(np.mean(test_batch_mses)))
 
 
 if __name__ == "__main__":
 
     main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
-         save_per_epoch=True,
+         save_per_epoch=False,
          retrain=True,
          eval_train=True,
          test_only=False)
