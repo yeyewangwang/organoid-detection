@@ -170,6 +170,6 @@ if __name__ == "__main__":
 
     main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
          save_per_epoch=True,
-         retrain=False,
+         retrain=True,
          eval_train=True,
          test_only=False)
