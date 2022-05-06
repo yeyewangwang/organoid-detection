@@ -123,6 +123,9 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
     result[grid_x, grid_y, best_iou_index, :] = preds
 
+    # convert to to logit scale
+    result[:,:,:,4] = logit(result[:,:,:,4])
+
     return tf.convert_to_tensor(result)
 
 
@@ -168,7 +171,6 @@ def t_to_b(t, cx, cy, pw, ph):
     ty = t[:,1]
     tw = t[:,2]
     th = t[:,3]
-    to = t[:,4]
 
     bx = tf.cast(tf.math.sigmoid(tx), tf.int64) + cx
     by = tf.cast(tf.math.sigmoid(ty), tf.int64) + cy

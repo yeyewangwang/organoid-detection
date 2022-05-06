@@ -30,6 +30,7 @@ def img_y_to_batch(images_dict, y, batch_size=32):
 
 def main(saved_weights_path="saved_weights",
          retrain=True,
+         eval_train=True,
          test_only=False):
     data_dir = "data"
     print("Getting data...")
@@ -117,12 +118,30 @@ def main(saved_weights_path="saved_weights",
     if not test_only:
         print("Trained the model!")
 
+    if eval_train:
+        train_loss = []
+        batch_maps = []
+        match_mses = []
+        for j, data in enumerate(train_data_gen):
+            print(f"Test num batch {j}")
+            img_batch, y_batch = data
+            yhat = model(img_batch, training=False)
+            yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
+            map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
+            batch_maps.append(map_batch)
+            batch_mses.append(mse_batch)
+        print(f"Testing loss {np.mean(test_loss)}")
+        #Print the accuracy for testing set
+        print("MAP for testing set is " + str(np.mean(batch_maps)))
+        print("Quantization MSE for testing set is " + str(np.mean(batch_mses)))
+
     # test the model
     print("Now testing...")
     y_test = encode_all_bboxes(test_labels, anchors, dims)
     test_data_gen = img_y_to_batch(test_images, y_test, hp.batch_size)
     test_loss = []
-    batch_accuracies = []
+    batch_maps = []
+    batch_mses = []
     
     for j, data in enumerate(test_data_gen):
         print(f"Test num batch {j}")
@@ -131,14 +150,18 @@ def main(saved_weights_path="saved_weights",
         yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
-        batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims, threshold=0.000001))
+        map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
+        batch_maps.append(map_batch)
+        batch_mses.append(mse_batch)
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
-    print("Accuracy for testing set is " + str(np.mean(batch_accuracies)))
+    print("MAP for testing set is " + str(np.mean(batch_maps)))
+    print("Quantization MSE for testing set is " + str(np.mean(batch_mses)))
 
 
 if __name__ == "__main__":
 
     main(saved_weights_path="saved_weights/one_layer",
          retrain=True,
-         test_only=False)
+         eval_train=True,
+         test_only=True)
