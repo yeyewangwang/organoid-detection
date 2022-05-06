@@ -1,4 +1,3 @@
-from cv2 import QT_STYLE_ITALIC
 import numpy as np
 from anchors import *
 import tensorflow as tf
