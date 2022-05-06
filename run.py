@@ -28,7 +28,9 @@ def img_y_to_batch(images_dict, y, batch_size=32):
     # img_array = np.asarray(list(images_dict.values()))
     # return img_array
 
-def main():
+def main(saved_weights_path="saved_weights",
+         retrain=True,
+         test_only=False):
     data_dir = "data"
     print("Getting data...")
     train_images, train_labels, test_images, test_labels = get_data(
@@ -51,7 +53,20 @@ def main():
     
     #Set a parameter to use for the grid dim based on the model shape instead of hardcoding it
     grid_dim = output.shape[2]
+
     model = tf.keras.Model(input, output)
+
+    num_epochs = hp.num_epochs
+    if retrain:
+        print(f"Training from scratch")
+    elif test_only:
+        num_epochs = 0
+        model.load_weights(saved_weights_path)
+        print(f"Restoring weights from {saved_weights_path}")
+    else:
+        model.load_weights(saved_weights_path)
+        print("Training from saved weights")
+        print(f"Restoring weights from {saved_weights_path}")
 
     print("Getting ground truth outputs...")
     anchors = generate_anchors(train_labels, hp.num_anchors)
@@ -62,16 +77,20 @@ def main():
     end_time = time.time()
     print(f'Image loading took {end_time - start_time}s.')
 
-    model.summary()
     optimizer = tf.keras.optimizers.Adam()
 
     # train the model
-    print("Now training the model...")
+    if not test_only:
+        model.summary()
+        print("Now training the model...")
     start_time = time.time()
-    for i in range(hp.num_epochs):
+    for i in range(num_epochs):
         loss = []
         print(f"num epochs: {hp.num_epochs}")
         for j, data in enumerate(train_data_gen):
+            # if j == 2:
+            #     break
+
             print(f"num batch {j}")
             img_batch, y_batch = data
 
@@ -89,7 +108,14 @@ def main():
         start_time = curr_time
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
-    print("Trained the model!")
+
+        # Save weights
+        if saved_weights_path:
+            model.save_weights(saved_weights_path)
+            print(f"epoch {i} weights saved at {saved_weights_path}")
+
+    if not test_only:
+        print("Trained the model!")
 
     # test the model
     print("Now testing...")
@@ -105,7 +131,7 @@ def main():
         yhat = tf.reshape(yhat, [-1, grid_dim, grid_dim, hp.num_anchors, 5])
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
-        batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims))
+        batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims, threshold=0.000001))
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
     print("Accuracy for testing set is " + str(np.mean(batch_accuracies)))
@@ -113,4 +139,6 @@ def main():
 
 if __name__ == "__main__":
 
-    main()
+    main(saved_weights_path="saved_weights/one_layer",
+         retrain=True,
+         test_only=False)
