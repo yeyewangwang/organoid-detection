@@ -117,7 +117,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
                 saved_weights_path = saved_weights_path.join("_e" + str(i))
             weight_file = Path(saved_weights_path)
             weight_file.touch(exist_ok=True)
-            model.save_weights(saved_weights_path)
+            model.save_weights(weight_file)
             print(f"epoch {i} weights saved at {saved_weights_path}")
             weight_file = open(saved_weights_path)
 
