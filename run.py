@@ -115,11 +115,12 @@ def main(saved_weights_path="saved_weights/new_experiment",
         if save_per_epoch or i == num_epochs - 1:
             if save_per_epoch:
                 saved_weights_path = saved_weights_path.join("_e" + str(i))
+
+            print("SAVING WEIGHTS AT " + saved_weights_path)
             weight_file = Path(saved_weights_path)
             weight_file.touch(exist_ok=True)
-            model.save_weights(weight_file)
+            model.save_weights(saved_weights_path)
             print(f"epoch {i} weights saved at {saved_weights_path}")
-            weight_file = open(saved_weights_path)
 
 
     if not test_only:
