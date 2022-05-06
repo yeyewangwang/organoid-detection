@@ -45,10 +45,10 @@ def main(saved_weights_path="saved_weights",
 
     # HYPERPARAMETER SETTING
     input = tf.keras.layers.Input([hp.img_height, hp.img_width, 3])
-    #output = run_yolov4(input)
+    output = run_yolov4(input)
 
     # Testing for just the training, testing, and loss on a simplified model
-    output = run_one_layer(input)
+    #output = run_one_layer(input)
 
     print(output.shape)
     
@@ -161,7 +161,7 @@ def main(saved_weights_path="saved_weights",
 
 if __name__ == "__main__":
 
-    main(saved_weights_path="saved_weights/one_layer",
-         retrain=True,
+    main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
+         retrain=False,
          eval_train=True,
-         test_only=True)
+         test_only=False)
