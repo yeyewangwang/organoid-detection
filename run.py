@@ -1,12 +1,12 @@
-import keras
-import numpy
+import hyperparameters as hp
 import numpy as np
 import time
 import tensorflow as tf
-from preprocess import get_data
+from pathlib import Path
+
 from anchors import *
 from models import run_yolov4, run_one_layer
-import hyperparameters as hp
+from preprocess import get_data
 from train import *
 
 
@@ -28,7 +28,8 @@ def img_y_to_batch(images_dict, y, batch_size=32):
     # img_array = np.asarray(list(images_dict.values()))
     # return img_array
 
-def main(saved_weights_path="saved_weights",
+def main(saved_weights_path="saved_weights/new_experiment",
+         save_per_epoch=False,
          retrain=True,
          eval_train=True,
          test_only=False):
@@ -110,10 +111,16 @@ def main(saved_weights_path="saved_weights",
         #reset the data generator
         train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
 
-        # Save weights
-        if saved_weights_path:
+        # Save weights either per epoch or if last epoch
+        if save_per_epoch or i == num_epochs - 1:
+            if save_per_epoch:
+                saved_weights_path = saved_weights_path.join("_e" + str(i))
+            weight_file = Path(saved_weights_path)
+            weight_file.touch(exist_ok=True)
             model.save_weights(saved_weights_path)
             print(f"epoch {i} weights saved at {saved_weights_path}")
+            weight_file = open(saved_weights_path)
+
 
     if not test_only:
         print("Trained the model!")
@@ -162,6 +169,7 @@ def main(saved_weights_path="saved_weights",
 if __name__ == "__main__":
 
     main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
+         save_per_epoch=True,
          retrain=False,
          eval_train=True,
          test_only=False)
