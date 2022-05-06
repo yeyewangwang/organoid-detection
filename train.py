@@ -60,7 +60,16 @@ def calculate_iou(box1, box2):
 
     return intersecting_area / union_area
 
-    
+def bboxes(y, yhat, anchors, dims, threshold=0.5, iou=0.7):
+    y = tf.stack(y, axis = 0)
+    yhat = tf.cast(yhat, tf.float64)
+
+    object_indices = tf.where(y[:,:,:,:,4] == 1)
+    prediction_indices = tf.where(yhat[:,:,:,:,4] > threshold)
+    y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_indices, anchors, dims))
+    yhat_prediction_bb = xywh_to_yxyx(decode_bboxes(yhat, prediction_indices, anchors, dims))
+    return y_object_bb, yhat_prediction_bb
+
 # get the accuracy of how many boxes have been properly predicted
 # threshold is for whether our model thinks it's a box
 # iou is for whether we consider the iou score enough overlap to count as an accurate prediction

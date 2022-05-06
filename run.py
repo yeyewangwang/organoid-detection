@@ -132,6 +132,11 @@ def main(saved_weights_path="saved_weights",
         loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
         test_loss.append(loss)
         batch_accuracies.append(mean_avg_precision(y_batch, yhat, anchors, dims, threshold=0.000001))
+
+        y_bboxes, y_hat_bboxesd = bboxes(y_batch, yhat, anchors, dims, threshold=0.5, iou=0.7)
+        visualize(img_batch[0], y_batch, yhat)
+
+
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
     print("Accuracy for testing set is " + str(np.mean(batch_accuracies)))
