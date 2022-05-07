@@ -2,6 +2,7 @@ import numpy as np
 from anchors import *
 import tensorflow as tf
 import tensorflow_addons as tfa
+import matplotlib.pyplot as plt
 
 
 # y and yhat are lists of tensors of shape (grid_dim, grid_dim, num_anchors, 5)
@@ -103,20 +104,16 @@ def map_and_mse(y, yhat, anchors, dims, threshold = 0.5, iou = 0.7):
 
     return np.mean(average_precisions), np.mean(q_squared_errors)
 
-
-
-def map_and_mse_single(y_object_bb, yhat_prediction_bb, iou = 0.7):
+def best_boxes_single(y_object_bb, yhat_prediction_bb, iou = 0.7):
     num_actual_bb = y_object_bb.shape[0]
     num_predict_bb = yhat_prediction_bb.shape[0]
 
     if num_predict_bb > 1000:
         print("predicting over 1000 boxes :(")
 
-    squared_error = (num_actual_bb - num_predict_bb) ** 2
-
     if num_predict_bb == 0:
         print("No boxes predicted that met the threshold")
-        average_precision = 0.0
+        return []
     else:
         iou_actual_prediction_matrix = np.empty((num_actual_bb, num_predict_bb))
         for actual_index in range(num_actual_bb):
@@ -128,14 +125,55 @@ def map_and_mse_single(y_object_bb, yhat_prediction_bb, iou = 0.7):
 
         # find the maximum values of iou in the matrix
         best_predicted_boxes = np.max(iou_actual_prediction_matrix, axis = 1)
+        return best_predicted_boxes
 
+
+def map_and_mse_single(y_object_bb, yhat_prediction_bb, iou = 0.7):
+    num_actual_bb = y_object_bb.shape[0]
+    num_predict_bb = yhat_prediction_bb.shape[0]
+
+    squared_error = (num_actual_bb - num_predict_bb) ** 2
+
+    best_pred_boxes = best_boxes_single(y_object_bb, yhat_prediction_bb, iou=iou)
+
+    if len(best_pred_boxes) == 0:
+        print("No boxes predicted that met the threshold")
+        average_precision = 0.0
+    else:
         # decide whether it's strong enough iou to be counted -
         # does it meet the iou cutoff set?
         # if there's the same predicted box that is best
         # for multiple actual boxes, we still count it
-        count = np.sum(best_predicted_boxes > iou)
+        count = np.sum(best_pred_boxes > iou)
 
         #return the percentage of actual boxes that were predicted
         average_precision = count / num_actual_bb
 
     return squared_error, average_precision
+
+
+def box_yxyx(y, yhat, anchors, dims, threshold = 0.5, iou = 0.7):
+    """
+    Generate (list of label yxyx, list of prediction yxyx).
+
+    The yxyx values are already converted into image dimensions.
+    """
+    y = tf.stack(y, axis = 0)
+    yhat = tf.cast(yhat, tf.float64)
+
+    object_indices = tf.where(tf.sigmoid(y[:,:,:,:,4]) == 1)
+    prediction_indices = tf.where(tf.sigmoid(yhat[:,:,:,:,4]) > threshold)
+
+    obj_bbs, pred_bbs = [], []
+    # iterate thru images
+    for img in range(y.shape[0]):
+        object_img_filter = tf.where(object_indices[:,0,...] == img)
+        object_img_indices = tf.gather_nd(object_indices, object_img_filter)
+        pred_img_filter = tf.where(prediction_indices[:,0,...] == img)
+        pred_img_indices = tf.gather_nd(prediction_indices, pred_img_filter)
+
+        y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_img_indices, anchors, dims))
+        yhat_prediction_bb = xywh_to_yxyx(decode_bboxes(yhat, pred_img_indices, anchors, dims))
+        obj_bbs.append(y_object_bb)
+        pred_bbs.append(yhat_prediction_bb)
+    return obj_bbs, pred_bbs
