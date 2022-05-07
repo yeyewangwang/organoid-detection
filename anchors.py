@@ -73,7 +73,6 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     img_width, img_height, grid_dim = dims
     num_anchors = anchors.shape[0]
     num_boxes = box_array.shape[0]
-    # TODO: are all images same dims after preprocessing?
 
     # construct array of all grid coordinates
     cell_width = int(img_width / grid_dim)
@@ -97,8 +96,8 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     cy = grid_y * cell_height
 
     # get offset coordinates aka sigma_tx and sigma_ty
-    sigma_tx = np.minimum(bx - cx, cell_width - 1)
-    sigma_ty = np.minimum(by - cy, cell_height - 1)
+    sigma_tx = np.minimum(bx - cx, cell_width - 1)/cell_width
+    sigma_ty = np.minimum(by - cy, cell_height - 1)/cell_height
 
     # get best anchor for each input bbox
     iou = IOU_nocenter(box_array, anchors)
@@ -110,8 +109,8 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     ph = anchors[best_iou_index,1]
 
     # finally we are ready to calculate "ground truth predictions"
-    tx = logit((sigma_tx)/cell_width).reshape(-1,1)
-    ty = logit((sigma_ty)/cell_height).reshape(-1,1)
+    tx = logit((sigma_tx)).reshape(-1,1)
+    ty = logit((sigma_ty)).reshape(-1,1)
     tw = np.log(bw / pw).reshape(-1,1)
     th = np.log(bh / ph).reshape(-1,1)
     to = np.ones((num_boxes, 1))
@@ -122,6 +121,9 @@ def encode_bboxes(box_array, anchors, dims = (300, 300, 13)):
     preds = np.hstack((tx, ty, tw, th, to))
     result = np.zeros((grid_dim, grid_dim, num_anchors, 5))
     result[grid_x, grid_y, best_iou_index, :] = preds
+
+    # convert to to logit scale
+    result[:,:,:,4] = logit(result[:,:,:,4])
 
     return tf.convert_to_tensor(result)
 
@@ -161,17 +163,16 @@ def decode_bboxes(result, indices, anchors, dims = (300, 300, 13)):
     pw = anchors[anchor_index,0]
     ph = anchors[anchor_index,1]
 
-    return t_to_b(t, cx, cy, pw, ph)
+    return t_to_b(t, cx, cy, pw, ph, cell_width, cell_height)
 
-def t_to_b(t, cx, cy, pw, ph):
+def t_to_b(t, cx, cy, pw, ph, cell_width, cell_height):
     tx = t[:,0]
     ty = t[:,1]
     tw = t[:,2]
     th = t[:,3]
-    to = t[:,4]
 
-    bx = tf.cast(tf.math.sigmoid(tx), tf.int64) + cx
-    by = tf.cast(tf.math.sigmoid(ty), tf.int64) + cy
+    bx = tf.cast(tf.math.sigmoid(tx) * cell_width, tf.int64) + cx
+    by = tf.cast(tf.math.sigmoid(ty) * cell_height, tf.int64) + cy
     bw = tf.cast(pw * tf.math.exp(tw), tf.int64) # consider: making this numerically better-conditioned
     bh = tf.cast(ph * tf.math.exp(th), tf.int64)
 
