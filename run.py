@@ -8,7 +8,7 @@ from anchors import *
 from models import run_yolov4, run_one_layer
 from preprocess import get_data
 from train import *
-
+from visualization import plot_boxes
 
 def img_y_to_batch(images_dict, y, batch_size=32):
     """
@@ -108,6 +108,15 @@ def main(saved_weights_path="saved_weights/new_experiment",
                     train_batch_maps.append(map_batch)
                     train_batch_mses.append(mse_batch)
 
+                    # Visualize a few images, and print the boxes
+                    if j in [0, 2, 5, 10]:
+                        true_yxyx, pred_yxyx = box_yxyx(y, yhat, anchors, dims, threshold=0.9999, iou=0.7)
+                        for img_num in [0]:
+                            if len(pred_yxyx) == 0:
+                                print("No predicted boxes")
+                            else:
+                                plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
+
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
         print(f"epoch = {i} loss = {np.mean(loss)}")
@@ -156,6 +165,15 @@ def main(saved_weights_path="saved_weights/new_experiment",
         map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
         test_batch_maps.append(map_batch)
         test_batch_mses.append(mse_batch)
+
+        # Visualize a few images, and print the boxes
+        if j in [0, 2]:
+            true_yxyx, pred_yxyx = box_yxyx(y, yhat, anchors, dims, threshold=0.9999, iou=0.7)
+            for img_num in [0]:
+                if len(pred_yxyx) == 0:
+                    print("No predicted boxes")
+                else:
+                    plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
 
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
