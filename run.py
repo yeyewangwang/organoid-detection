@@ -115,7 +115,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
                             if len(pred_yxyx) == 0:
                                 print("No predicted boxes")
                             else:
-                                plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
+                                plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
 
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
@@ -173,7 +173,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
                 if len(pred_yxyx) == 0:
                     print("No predicted boxes")
                 else:
-                    plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
+                    plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
 
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
