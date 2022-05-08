@@ -18,18 +18,22 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     object_indices = tf.where(tf.sigmoid(y[:,:,:,:,4]) == 1)
     no_object_indices = tf.where(tf.sigmoid(y[:,:,:,:,4]) == 0)
 
+    # print("# of anchors with objects:", tf.math.reduce_sum(object_indices))
+    # print("# of anchors with no objects:", tf.math.reduce_sum(no_object_indices))
+
     # bounding box loss:
     # for each GROUND TRUTH BOX,
     # calculate 1-IOU with the corresponding cell's prediction.
     y_object_bb = xywh_to_yxyx(decode_bboxes(y, object_indices, anchors, dims))
     yhat_object_bb = xywh_to_yxyx(decode_bboxes(yhat, object_indices, anchors, dims))
-    gl = tfa.losses.GIoULoss()
+    gl = tfa.losses.GIoULoss(reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
+    # Get negative giou loss
     iou_loss = tf.cast(gl(y_object_bb, yhat_object_bb), tf.float64)
 
     # objectness loss where there is an object: logistic objective.
     y_object_to = tf.sigmoid(tf.gather_nd(y, object_indices)[:,4])
     yhat_object_to = tf.sigmoid(tf.gather_nd(yhat, object_indices)[:,4])
-    bce = tf.keras.losses.BinaryCrossentropy(from_logits = False)
+    bce = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE)
     objectness_loss = bce(y_object_to, yhat_object_to)
 
     # objectness loss where there's not an object: logistic objective
@@ -38,7 +42,8 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     y_no_object_to = tf.sigmoid(tf.gather_nd(y, no_object_indices)[:,4])
     yhat_no_object_to = tf.sigmoid(tf.gather_nd(yhat, no_object_indices)[:,4])
     no_objectness_loss = bce(y_no_object_to, yhat_no_object_to)
-    
+
+    print(f"iou={iou_loss}, objectness={objectness_loss}, no_objectness={no_objectness_loss}")
     return lambda_coord * iou_loss + objectness_loss + lambda_noobj * no_objectness_loss
 
 
@@ -152,7 +157,7 @@ def map_and_mse_single(y_object_bb, yhat_prediction_bb, iou = 0.7):
     return squared_error, average_precision
 
 
-def box_yxyx(y, yhat, anchors, dims, threshold = 0.5, iou = 0.7):
+def box_yxyx(y, yhat, anchors, dims, threshold = 0.5, iou=0.7):
     """
     Generate (list of label yxyx, list of prediction yxyx).
 
