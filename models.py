@@ -140,7 +140,7 @@ def run_yolov4(inp):
 
     # Finish upsampling and concatenating all features together, start predicting bounding boxes
     features = perform_conv(inp=features, filt=256, kern=3, stri=1, pad='same')
-    boxes1 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    boxes1 = perform_conv(inp=features, filt=hp.num_anchors *  5, kern=1, stri=1,
                    pad='same', act=False)
     return boxes1
 
@@ -154,7 +154,7 @@ def run_yolov4(inp):
     
     # # Produce the second set of bounding boxes
     # features = perform_conv(inp=features, filt=512, kern=3, stri=1, pad='same')
-    # boxes2 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    # boxes2 = perform_conv(inp=features, filt=hp.num_anchors * 5, kern=1, stri=1,
     #                       pad='same', act=False)
     
     # features = perform_conv(inp=m_features, filt=512, kern=3, stri=2, pad='same')
@@ -166,7 +166,7 @@ def run_yolov4(inp):
     
     # # Produce the third set of bounding boxes
     # features = perform_conv(inp=features, filt=1024, kern=3, stri=1, pad='same')
-    # boxes3 = perform_conv(inp=features, filt=3 * 5, kern=1, stri=1,
+    # boxes3 = perform_conv(inp=features, filt=hp.num_anchors *  5, kern=1, stri=1,
     #                       pad='same', act=False)
 
     # Maybe use conv results and produces, small, medium, and large boxes separtately
