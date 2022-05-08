@@ -5,7 +5,7 @@ img_height = 300
 
 img_width = 300
 
-batch_size = 10
+batch_size = 112
 
 #Parameters for models
 
