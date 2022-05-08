@@ -22,9 +22,10 @@ def img_y_to_batch(images_dict, y, batch_size=32):
         batch_imgs = np.asarray(img_list[i:i+batch_size])
         yield batch_imgs, y[i:i+batch_size]
         last_i += batch_size
-    if last_i < len(img_list):
-        yield np.asarray(img_list[last_i:]), y[last_i:]
-
+    #
+    # if last_i < len(img_list):
+    #     yield np.asarray(img_list[last_i:]), y[last_i:]
+    #
 
 def main(saved_weights_path="saved_weights/new_experiment",
          save_per_epoch=False,
@@ -47,7 +48,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
     output = run_yolov4(input)
 
     # Testing for just the training, testing, and loss on a simplified model
-    #output = run_one_layer(input)
+    # output = run_one_layer(input)
 
     print(output.shape)
     
@@ -71,7 +72,11 @@ def main(saved_weights_path="saved_weights/new_experiment",
     print("Getting ground truth outputs...")
     anchors = generate_anchors(train_labels, hp.num_anchors)
     dims = (hp.img_width, hp.img_height, grid_dim)
+
+    # TODO: debugged till here! Likely in encode/decode
     y = encode_all_bboxes(train_labels, anchors, dims)
+
+
     start_time = time.time()
     train_data_gen = img_y_to_batch(train_images, y, hp.batch_size)
     end_time = time.time()
@@ -84,6 +89,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
         model.summary()
         print("Now training the model...")
     start_time = time.time()
+
     for i in range(num_epochs):
         loss = []
         train_batch_maps = []
@@ -97,6 +103,8 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
             with tf.GradientTape() as tape:
                 yhat = model(img_batch, training = True)
+
+                print("actual output shape", yhat.shape)
                 yhat = tf.reshape(yhat, [hp.batch_size, grid_dim, grid_dim, hp.num_anchors, 5])
                 curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
@@ -104,18 +112,19 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
                 # If it's the last epoch and we want to evaluate how our training has done
                 if eval_train and i == num_epochs - 1:
+                    # TODO: debug
                     map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
                     train_batch_maps.append(map_batch)
                     train_batch_mses.append(mse_batch)
 
                     # Visualize a few images, and print the boxes
-                    if j in [0, 2, 5, 10]:
+                    if j in [0] or j:
                         true_yxyx, pred_yxyx = box_yxyx(y, yhat, anchors, dims, threshold=0.9999, iou=0.7)
-                        for img_num in [0]:
+                        for img_num in range(len(img_batch)):
                             if len(pred_yxyx) == 0:
                                 print("No predicted boxes")
                             else:
-                                plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
+                                plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
 
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
@@ -173,7 +182,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
                 if len(pred_yxyx) == 0:
                     print("No predicted boxes")
                 else:
-                    plot_boxes(img_batch[i], true_yxyx[img_num], pred_yxyx[img_num])
+                    plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
 
     print(f"Testing loss {np.mean(test_loss)}")
     #Print the accuracy for testing set
@@ -183,8 +192,8 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
 if __name__ == "__main__":
 
-    main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
-         save_per_epoch=False,
+    main(saved_weights_path="saved_weights/one_layer",
+         save_per_epoch=True,
          retrain=True,
          eval_train=True,
          test_only=False)
