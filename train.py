@@ -43,8 +43,9 @@ def yolo_loss(y, yhat, lambda_coord, lambda_noobj, anchors, dims):
     yhat_no_object_to = tf.sigmoid(tf.gather_nd(yhat, no_object_indices)[:,4])
     no_objectness_loss = bce(y_no_object_to, yhat_no_object_to)
 
-    print(f"iou={iou_loss}, objectness={objectness_loss}, no_objectness={no_objectness_loss}")
-    return lambda_coord * iou_loss + objectness_loss + lambda_noobj * no_objectness_loss
+    total_loss = lambda_coord * iou_loss + objectness_loss + lambda_noobj * no_objectness_loss
+    print(f"iou={iou_loss}, objectness={objectness_loss}, no_objectness={no_objectness_loss}, total={total_loss}")
+    return total_loss
 
 
 # get the intersection over union for two different boxes
