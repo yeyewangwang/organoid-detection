@@ -15,11 +15,18 @@ def img_y_to_batch(images_dict, y, batch_size=32):
     Convert images from dictionaries to
     a tensor of (batch size, img height, img width, number of color channels)
     """
-    img_list = list(images_dict.values())
+    img_list = np.asarray(list(images_dict.values()))
+    shuffled_indices = np.arange(len(y))
+    np.random.shuffle(shuffled_indices)
+    y = np.array(y)[shuffled_indices]
+    img_list = img_list[shuffled_indices]
+
     print(f"num of images {len(img_list)}")
     last_i = 0
     for i in range(0, len(img_list), batch_size):
-        batch_imgs = np.asarray(img_list[i:i+batch_size])
+        if i + batch_size > len(img_list):
+            continue
+        batch_imgs = img_list[i:i+batch_size]
         yield batch_imgs, y[i:i+batch_size]
         last_i += batch_size
     #
@@ -31,7 +38,8 @@ def main(saved_weights_path="saved_weights/new_experiment",
          save_per_epoch=False,
          retrain=True,
          eval_train=True,
-         test_only=False):
+         test_only=False,
+         visualize=False):
     data_dir = "data"
     print("Getting data...")
     train_images, train_labels, test_images, test_labels = get_data(
@@ -86,7 +94,7 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
     # train the model
     if not test_only:
-        model.summary()
+        # model.summary()
         print("Now training the model...")
     start_time = time.time()
 
@@ -104,7 +112,6 @@ def main(saved_weights_path="saved_weights/new_experiment",
             with tf.GradientTape() as tape:
                 yhat = model(img_batch, training = True)
 
-                print("actual output shape", yhat.shape)
                 yhat = tf.reshape(yhat, [hp.batch_size, grid_dim, grid_dim, hp.num_anchors, 5])
                 curr_loss = yolo_loss(y_batch, yhat, hp.lambda_coord, hp.lambda_noobj, anchors, dims)
                 gradients = tape.gradient(curr_loss, model.trainable_variables)
@@ -113,18 +120,30 @@ def main(saved_weights_path="saved_weights/new_experiment",
                 # If it's the last epoch and we want to evaluate how our training has done
                 if eval_train and i == num_epochs - 1:
                     # TODO: debug
-                    map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold = 0.5)
+                    map_batch, mse_batch = map_and_mse(y_batch, yhat, anchors, dims, threshold=0.5)
                     train_batch_maps.append(map_batch)
                     train_batch_mses.append(mse_batch)
 
+                # if j % 5 == 0 and visualize and i == num_epochs - 1:
+                if visualize and i == num_epochs - 1:
                     # Visualize a few images, and print the boxes
-                    if j in [0] or j:
-                        true_yxyx, pred_yxyx = box_yxyx(y, yhat, anchors, dims, threshold=0.9999, iou=0.7)
-                        for img_num in range(len(img_batch)):
-                            if len(pred_yxyx) == 0:
-                                print("No predicted boxes")
-                            else:
-                                plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
+                    true_yxyx, pred_yxyx = box_yxyx(y, yhat, anchors, dims, threshold=0.75, iou=0.7)
+                    for img_num in [0]:
+                        if len(pred_yxyx[img_num]) == 0:
+                            print("No predicted boxes")
+                        else:
+                            plot_boxes(img_batch[img_num], true_yxyx[img_num], pred_yxyx[img_num])
+
+                # Print out a couple of boxes every 5 batches
+                if j % 5 == 0:
+                    true_yxyx, pred_yxyx = box_yxyx(y[:2], yhat[:2], anchors, dims, threshold=0.75, iou=0.7)
+                    true_yxyx, pred_yxyx = true_yxyx[0].numpy().tolist(), pred_yxyx[0].numpy().tolist()
+
+                    print("True boxes:", true_yxyx)
+                    if len(pred_yxyx) >= 5:
+                        print(f"Predicted boxes with confidence >= 0.75 first 5 of {len(pred_yxyx)}:", pred_yxyx[:5])
+                    else:
+                        print("Predicted boxes with confidence >= 0.75:", pred_yxyx)
 
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
@@ -192,7 +211,16 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
 if __name__ == "__main__":
     main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
-         save_per_epoch=False,
+         save_per_epoch=True,
          retrain=True,
-         eval_train=True,
-         test_only=False)
+         eval_train=False,
+         test_only=False,
+         visualize=False # Visualize for the last epoch, every 5 batches
+         )
+
+    # main(saved_weights_path="saved_weights/onelayer",
+    #      save_per_epoch=False,
+    #      retrain=True,
+    #      eval_train=False,
+    #      test_only=False,
+    #      visualize=False)
