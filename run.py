@@ -136,14 +136,28 @@ def main(saved_weights_path="saved_weights/new_experiment",
 
                 # Print out a couple of boxes every 5 batches
                 if j % 5 == 0:
+
+                    true_yxyx, pred_yxyx = box_yxyx(y[:2], yhat[:2], anchors, dims, threshold=0.5, iou=0.7)
+                    true_yxyx, pred_yxyx = true_yxyx[0].numpy().tolist(), pred_yxyx[0].numpy().tolist()
+                    print("True boxes:", true_yxyx)
+                    if len(pred_yxyx) >= 5:
+                        print(f"Predicted boxes with confidence >= 0.5 first 5 of {len(pred_yxyx)}:", pred_yxyx[:5])
+                    else:
+                        print("Predicted boxes with confidence >= 0.5:", pred_yxyx)
+
                     true_yxyx, pred_yxyx = box_yxyx(y[:2], yhat[:2], anchors, dims, threshold=0.75, iou=0.7)
                     true_yxyx, pred_yxyx = true_yxyx[0].numpy().tolist(), pred_yxyx[0].numpy().tolist()
-
-                    print("True boxes:", true_yxyx)
                     if len(pred_yxyx) >= 5:
                         print(f"Predicted boxes with confidence >= 0.75 first 5 of {len(pred_yxyx)}:", pred_yxyx[:5])
                     else:
                         print("Predicted boxes with confidence >= 0.75:", pred_yxyx)
+
+                    true_yxyx, pred_yxyx = box_yxyx(y[:2], yhat[:2], anchors, dims, threshold=0.85, iou=0.7)
+                    true_yxyx, pred_yxyx = true_yxyx[0].numpy().tolist(), pred_yxyx[0].numpy().tolist()
+                    if len(pred_yxyx) >= 5:
+                        print(f"Predicted boxes with confidence >= 0.85 first 5 of {len(pred_yxyx)}:", pred_yxyx[:5])
+                    else:
+                        print("Predicted boxes with confidence >= 0.85:", pred_yxyx)
 
                 # print('WE GOT A TRAINING STEP IN PEOPLE')
             loss.append(curr_loss)
@@ -213,7 +227,7 @@ if __name__ == "__main__":
     main(saved_weights_path="saved_weights/full_50ep_1lc_1ln_0.5th",
          save_per_epoch=True,
          retrain=True,
-         eval_train=False,
+         eval_train=True,
          test_only=False,
          visualize=False # Visualize for the last epoch, every 5 batches
          )
