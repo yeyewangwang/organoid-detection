@@ -55,7 +55,7 @@ def run_yolov4(inp):
     working_data = inp
 
     # Backbone: Simplified CSPDarknet53 (53 convolutional layers) used in the yolov4
-    working_data = perform_conv(inp=working_data, filt=32, kern=3, stri=1, pad='same')
+    working_data = perform_conv(inp=working_data, filt=32, kern=3, stri=1, pad='same', bat=True)
     #downsample from 256x256 to 128x128
     working_data = perform_conv(inp=working_data, filt=64, kern=3, stri=2, pad='valid')
 
