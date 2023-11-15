@@ -1,0 +1,7 @@
+.DS_Store
+*.pdf
+data
+saved_weights
+warmup_2_epochs
+__pycache__
+.env
