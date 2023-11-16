@@ -1,3 +1,7 @@
 torch
 torchvision
 matplotlib
+# Hugging face
+datasets
+transformers
+albumentations
