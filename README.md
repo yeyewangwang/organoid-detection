@@ -9,6 +9,7 @@ In May 2022, Lizzie Kumar, Alex Wong, and I trimmed Yolo V3. We showed that trai
     ![alt text](gallery/canny_edges_2.png)
     <!-- 2. Ask CoPilot, "How do I filter out high intensity circles using OpenCV?". CoPilot recommends Gaussian blur and Hough Circles. -->
 2. Minimum viable product: Fine-tune a pretrained model using HuggingFace
-    1. Produce metadata.jsonl for HuggingFace default loading script.
-3. Use a multi-modal LLM API
-4. Training using only Canny edges and bounding boxes
+    1. Data preprocessing: this step produces [metadata.jsonl](data/train/metadata.jsonl) for HuggingFace default loading script to use.
+3. Potentially higher accuracy: use a multi-modal LLM API
+4. High throughput version: Training using only Canny edges and bounding boxes
+
